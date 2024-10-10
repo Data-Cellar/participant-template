@@ -1,0 +1,53 @@
+
+services:
+
+  wallet:
+    image: waltid/wallet-api:${WALTID_VERSION}
+    container_name: ${PARTICIPANT_NAME}.wallet
+    restart: unless-stopped
+    volumes:
+      - ./waltid/wallet_latest/config:/waltid-wallet-api/config
+      - ./waltid/wallet_latest/data:/waltid-wallet-api/data
+    ports:
+      - 7001:7001
+    networks:
+      - datacellar
+    healthcheck:
+      test: curl http://localhost:7001
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+  
+  api:
+    image: datacellar/credentials-api:{CREDENTIALS_API_IMAGE_VERSION}
+    build: ./api
+    container_name: ${PARTICIPANT_NAME}.credentials-api
+    restart: unless-stopped
+    volumes:
+      - ./api:/app
+      - ./data/vc:/vc
+      - ./data/certs:/certs
+      - ./waltid/data:/waltid
+    ports:
+      - 8030:8080
+    networks:
+      - datacellar
+    entrypoint: sh -c "sleep infinity"
+    healthcheck:
+      test: curl http://localhost:8080
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+networks:
+  datacellar:
+    driver: bridge
+    name: datacellar_network
+    ipam:
+     config:
+       - subnet: 192.168.0.0/24
+         gateway: 192.168.0.1
+    driver_opts:
+      com.docker.network.bridge.name: br_datacellar

@@ -1,0 +1,133 @@
+version: "3"
+
+dotenv: ['.env']
+
+env:
+  PARTICIPANT_NAME: companyX
+  # DOMAIN_NAME: '{{.DOMAIN_NAME}}'
+  
+  # ISSUER_API_BASE_URL: "{{.ISSUER_API_BASE_URL}}"
+  # ISSUER_DID: '{{.ISSUER_DID}}'
+  # ISSUER_API_KEY: '{{.ISSUER_API_KEY}}'
+  
+  # VERIFIER_API_BASE_URL: '{{.ISSUER_API_BASE_URL}}'
+
+  EDCPY_IMAGE: edcpy
+  SCRIPTS_IMAGE: edc-scripts
+
+  SSI: true
+
+  CONNECTOR_DIR: connector
+  CONFIG_DIR: ./config
+
+  EDC_CONNECTOR_API_PORT: 9191          #/api
+  EDC_CONNECTOR_MANAGEMENT_PORT: 9193   #/management
+  EDC_CONNECTOR_PROTOCOL_PORT: 9194     #/protocol
+  EDC_CONNECTOR_CONTROL_PORT: 9192      #/control
+  EDC_CONNECTOR_PUBLIC_PORT: 9291       #/public
+
+  EDC_BACKEND_PORT: 8080
+
+  RABBITMQ_PORT: 5672
+  RABBITMQ_DEFAULT_USER: guest
+  RABBITMQ_DEFAULT_PASS: guest
+
+  CERTS_DIR: ./certs
+  KEY_ALIAS: datacellar
+  KEY_PASSW: datacellar
+  CERT_SUBJECT: '/C=FR/ST=Toulouse/L=Labege/O=CEA/OU=CEA/CN={{.PARTICIPANT_NAME}}.{{.DOMAIN_NAME}}'
+ 
+  WALLET_API_BASE_URL: http://{{.PARTICIPANT_NAME}}.wallet:7001
+  WALLET_USER_NAME: '{{.WALLET_USER_NAME}}'
+  WALLET_USER_EMAIL: '{{.WALLET_USER_EMAIL}}'
+  WALLET_USER_PASSWORD: '{{.WALLET_USER_PASSWORD}}'
+
+  DID_WEB_DOMAIN: '{{.PARTICIPANT_NAME}}.{{.DOMAIN_NAME}}'
+  UNIRESOLVER_URL: https://dev.uniresolver.io/1.0/identifiers
+  COUNTER_PARTY_PROTOCOL_URL: 'http://host.docker.internal:19194/protocol'
+
+tasks:
+  stop-all:
+    cmds:
+      - echo "{{.PARTICIPANT_NAME}} stopped"
+
+  start-all:
+    cmds:
+      - echo "{{.PARTICIPANT_NAME}} started"
+  # config-all:
+  #   cmds:
+  #     - envsubst < ./{{.CONFIG_DIR}}/connector.properties.tmpl > ./{{.CONFIG_DIR}}/connector.properties
+  #     - envsubst < .env.tmpl > .env
+  #     - envsubst < ./caddy/Caddyfile.tmpl > ./caddy/Caddyfile
+    
+  # clear:
+  #   cmds:
+  #     - sudo rm -rf waltid/wallet/data/*
+
+  # build-connector:
+  #   desc: Builds the connector
+  #   dir: "{{.CONNECTOR_DIR}}"
+  #   vars:
+  #     CLEAN: '{{default "true" .CLEAN}}'
+  #     SSI: '{{default "false" .SSI}}'
+  #   env:
+  #     # https://docs.gradle.org/current/userguide/build_environment.html#sec:project_properties
+  #     ORG_GRADLE_PROJECT_useSSI: "{{.SSI}}"
+  #   cmds:
+  #     - ./gradlew {{if eq .CLEAN "true"}}clean{{end}} build -PtaskThreads=2 --max-workers=2
+
+  # build-scripts-image:
+  #   desc: Builds the Docker image used to run helper scripts
+  #   dir: scripts
+  #   cmds:
+  #     - docker build -t {{.SCRIPTS_IMAGE}} .
+
+  # create-certs:
+  #   deps:
+  #     - build-scripts-image
+  #   requires:
+  #     vars: [CERTS_DIR]
+  #   cmds:
+  #     - mkdir -p {{.CERTS_DIR}}
+  #     - >
+  #       docker run --rm
+  #       -v {{.CERTS_DIR}}:/out
+  #       {{.SCRIPTS_IMAGE}}
+  #       /bin/bash -c "OUT_DIR=/out KEY_ALIAS={{.KEY_ALIAS}} KEY_PASSW={{.KEY_PASSW}} SUBJECT={{.CERT_SUBJECT}} ./create-certs.sh"
+  #   status:
+  #     - test -f {{.CERTS_DIR}}/*.pfx
+  #     - test -f {{.CERTS_DIR}}/key.pem
+  #     - test -f {{.CERTS_DIR}}/pubkey.pem
+
+  # up-wallet:
+  #   deps:
+  #     - create-certs
+  #   cmds:
+  #     - sudo chown 999:999 waltid/wallet/data
+  #     - docker compose up wallet -d --wait
+
+  # up-web-server:
+  #   cmds:
+  #     - docker compose up web-server -d --wait
+
+  # provision-wallet:
+  #   deps:
+  #     - up-wallet
+  #   cmds:
+  #     - docker compose up provision-wallet 
+
+  # up-consumer:
+  #   deps:
+  #     - up-wallet
+  #   cmds:
+  #     - sed -i '/^eu\.datacellar\.openapi\.url/ s/^/#/' ./{{.CONFIG_DIR}}/connector.properties
+  #     - docker compose up -d broker backend --wait
+  #     - docker compose up connector
+
+  # up-provider:
+  #   deps:
+  #     - up-wallet
+  #   cmds:
+  #     - docker compose up -d mock-http --wait 
+  #     - docker compose up connector
+
