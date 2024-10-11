@@ -2,29 +2,38 @@ version: "3"
 
 tasks:
 
-  dotenv: ['.env']
-
   setup-participant:
     desc: "Create a Data Cellar Dataspace participant : task setup-participant -- <participant-name>"
     vars:
       PARTICIPANT_NAME : '{{.CLI_ARGS}}'
       PARTICIPANT_TEMPLATE : '{{.USER_WORKING_DIR}}/../participant-template/'
       PARTICIPANT_FOLDER: './participants/{{.PARTICIPANT_NAME}}'
-      PROXY_FOLDER: './reverse-proxy/caddy'
+      PROXY_FOLDER: '/home/debian/datacellar/datacellar-mvd/reverse-proxy/caddy'
+      CERT_FOLDER: '{{.PROXY_FOLDER}}/certs'
       SED_CMD: 's/PARTICIPANT_NAME: companyX/PARTICIPANT_NAME: {{.PARTICIPANT_NAME}}/g'
+    env:
+      PARTICIPANT_NAME: '{{.PARTICIPANT_NAME}}'
+      CERT_FOLDER: '{{.CERT_FOLDER}}'
+      DOMAIN_NAME: 'datacellar.cosypoc.ovh'
     cmds:
-      - sh -c '[ -d "{{.PARTICIPANT_FOLDER}}" ] && task stop-all|| echo "" ' 
-      - sh -c '[ -d "{{.PARTICIPANT_FOLDER}}" ] && sudo rm -R {{.PARTICIPANT_FOLDER}} || echo ""'
-      - mkdir -p {{.PARTICIPANT_FOLDER}}
-      - cp -R {{.PARTICIPANT_TEMPLATE}}/* {{.PARTICIPANT_FOLDER}}/
-      - cp {{.USER_WORKING_DIR}}/.env {{.PARTICIPANT_FOLDER}}/.env
-      - sed -i '{{.SED_CMD}}' {{.PARTICIPANT_FOLDER}}/taskfile.yml
-      - cd {{.PARTICIPANT_FOLDER}} && task start-all
-      # - cd {{.PARTICIPANT_FOLDER}} && task config-all
+      # - sh -c '[ -d "{{.PARTICIPANT_FOLDER}}" ] && cd {{.PARTICIPANT_FOLDER}} && task stop-all || echo "" ' 
+      # - sh -c '[ -d "{{.PARTICIPANT_FOLDER}}" ] && sudo rm -R {{.PARTICIPANT_FOLDER}} || echo ""'
+      # - mkdir -p {{.PARTICIPANT_FOLDER}}
+      # - cp -R {{.PARTICIPANT_TEMPLATE}}/* {{.PARTICIPANT_FOLDER}}/
+      # - cp {{.USER_WORKING_DIR}}/.env {{.PARTICIPANT_FOLDER}}/.env
+      - envsubst < .env.tmpl > {{.PARTICIPANT_FOLDER}}/.env
+      # - sed -i '{{.SED_CMD}}' {{.PARTICIPANT_FOLDER}}/taskfile.yml
+      - cd {{.PARTICIPANT_FOLDER}} && task config-all
+
+      - bash {{.PROXY_FOLDER}}/remove-config-section.sh {{.PROXY_FOLDER}}/Caddyfile {{.PARTICIPANT_NAME}}
+      - cat {{.PARTICIPANT_FOLDER}}/Caddyfile >> {{.PROXY_FOLDER}}/Caddyfile
+      #- docker compose -f {{.PROXY_FOLDER}}/../docker-compose.yml restart caddy
+
+      #- cd {{.PARTICIPANT_FOLDER}} && task start-all
       # - cd {{.PARTICIPANT_FOLDER}} && task create-certs
-      # - ./{{.PROXY_FOLDER}}/remove-config-section.sh {{.PROXY_FOLDER}}/Caddyfile {{.PARTICIPANT_NAME}}
-      # - cat {{.PARTICIPANT_FOLDER}}/caddy/Caddyfile >> ./reverse-proxy/caddy/Caddyfile
-      # - docker compose -f {{.PROXY_FOLDER}}/../docker-compose.yml restart caddy
+      
+      
+      
       # - cd {{.PARTICIPANT_FOLDER}} && task up-wallet
       # - cd {{.PARTICIPANT_FOLDER}} && task up-web-server
       # - cd {{.PARTICIPANT_FOLDER}} && task provision-wallet

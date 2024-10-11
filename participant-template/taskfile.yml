@@ -3,7 +3,7 @@ version: "3"
 dotenv: ['.env']
 
 env:
-  PARTICIPANT_NAME: companyX
+  PARTICIPANT_NAME: test
   # DOMAIN_NAME: '{{.DOMAIN_NAME}}'
   
   # ISSUER_API_BASE_URL: "{{.ISSUER_API_BASE_URL}}"
@@ -37,23 +37,69 @@ env:
   KEY_PASSW: datacellar
   CERT_SUBJECT: '/C=FR/ST=Toulouse/L=Labege/O=CEA/OU=CEA/CN={{.PARTICIPANT_NAME}}.{{.DOMAIN_NAME}}'
  
-  WALLET_API_BASE_URL: http://{{.PARTICIPANT_NAME}}.wallet:7001
-  WALLET_USER_NAME: '{{.WALLET_USER_NAME}}'
-  WALLET_USER_EMAIL: '{{.WALLET_USER_EMAIL}}'
-  WALLET_USER_PASSWORD: '{{.WALLET_USER_PASSWORD}}'
-
   DID_WEB_DOMAIN: '{{.PARTICIPANT_NAME}}.{{.DOMAIN_NAME}}'
-  UNIRESOLVER_URL: https://dev.uniresolver.io/1.0/identifiers
-  COUNTER_PARTY_PROTOCOL_URL: 'http://host.docker.internal:19194/protocol'
+  
 
 tasks:
   stop-all:
     cmds:
-      - echo "{{.PARTICIPANT_NAME}} stopped"
+      - task: stop-credentials-manager
 
   start-all:
     cmds:
-      - echo "{{.PARTICIPANT_NAME}} started"
+      - task: start-credentials-manager
+  
+  config-all:
+    cmds:
+      - task: config-caddyfile
+      - task: config-credentials-manager
+      
+
+  start-credentials-manager:
+    desc: "Start Credentials Manager"
+    deps:
+      - config-credentials-manager
+    vars: 
+      DIR_PATH: '{{.USER_WORKING_DIR}}/credentials-manager'
+    dir: '{{.DIR_PATH}}'
+    dotenv: ['{{.DIR_PATH}}/.env']
+    preconditions:
+      - test -f docker-compose.yml
+    cmds:
+      - docker compose up --wait
+  
+  stop-credentials-manager:
+    desc: "Stop Credentials Manager"
+    vars: 
+      DIR_PATH: '{{.USER_WORKING_DIR}}/credentials-manager'
+    dir: '{{.DIR_PATH}}'
+    dotenv: ['{{.DIR_PATH}}/.env']
+    preconditions:
+      - test -f docker-compose.yml
+    cmds:
+      - docker compose down
+  
+  config-credentials-manager:
+    vars: 
+      DIR_PATH: '{{.USER_WORKING_DIR}}/credentials-manager'
+    dir: '{{.DIR_PATH}}'
+    dotenv: ['{{.DIR_PATH}}/.env']
+    cmds:
+      - envsubst < .env.tmpl > .env
+      - cd {{.DIR_PATH}}/waltid && sudo chmod 755 data && sudo chown -R 1001:1001 data
+  
+  config-caddyfile:
+    vars: 
+      DIR_PATH: '{{.USER_WORKING_DIR}}'
+    dir: '{{.DIR_PATH}}'
+    dotenv: ['{{.DIR_PATH}}/.env']
+    cmds:
+      - envsubst < ./Caddyfile.tmpl > ./Caddyfile
+  
+
+
+  
+  
   # config-all:
   #   cmds:
   #     - envsubst < ./{{.CONFIG_DIR}}/connector.properties.tmpl > ./{{.CONFIG_DIR}}/connector.properties

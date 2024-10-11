@@ -13,3 +13,4 @@ jwcrypto==1.5.4
 coloredlogs==15.0.1
 sqlalchemy==2.0.30
 pyld==2.0.4
+jcs==0.2.1

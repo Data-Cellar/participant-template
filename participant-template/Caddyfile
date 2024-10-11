@@ -1,0 +1,91 @@
+#<test>
+#------------------------------------------------------
+# DATACELLAR Dataspace participant ( test ) 
+#------------------------------------------------------
+
+test.datacellar.cosypoc.ovh {
+	
+	#------------------------------------------------------------------
+	# Section 1 - Wallet (based on waltid)
+	#------------------------------------------------------------------
+
+	# Wallet !! NOTE this endpoint will be removed 
+	handle_path /swagger* {
+		rewrite * /swagger{uri}
+		reverse_proxy test.wallet:7001
+	}
+
+	# Wallet !! NOTE this endpoint will be removed 
+	handle_path /wallet-api/* {
+		rewrite * /wallet-api/{uri}
+		reverse_proxy test.wallet:7001
+	}
+
+
+	#------------------------------------------------------------------
+	# Section 2 - EDC CONNECTOR
+	#------------------------------------------------------------------
+
+	handle_path /protocol* {
+		rewrite * /protocol{uri}
+		reverse_proxy test.connector:9194
+	}
+
+	handle_path /management* {
+		rewrite * /management{uri}
+		reverse_proxy test.connector:9193
+	}
+
+	handle_path /control/token* {
+		rewrite * /control/token{uri}
+		reverse_proxy test.connector:9192
+	}
+
+	handle_path /public* {
+		rewrite * /public{uri}
+		reverse_proxy test.connector:9291
+	}
+
+	#------------------------------------------------------------------
+	# Section 3 - MOCK HTTP (Datasets API to be exposed via connector)
+	#------------------------------------------------------------------
+
+	handle_path /pull* {
+		rewrite * /pull{uri}
+		reverse_proxy test.backend:8080
+	}
+
+	handle_path /push* {
+		rewrite * /push{uri}
+		reverse_proxy test.backend:8080
+	}
+	
+	#------------------------------------------------------------------
+	# Section 3 - Participant 
+	#------------------------------------------------------------------
+	
+	# main API
+	handle_path /api/v1* {
+		rewrite * /api/v1{uri}
+		reverse_proxy test.credentials-ui:8080
+	}
+
+	# Swagger
+	handle_path /docs* {
+		rewrite * /docs{uri}
+		reverse_proxy test.credentials-ui:8080
+	}
+
+	# Certs
+	handle_path /.well-known/cert.pem {
+		rewrite * /.well-known/cert.pem
+		reverse_proxy test.web-server
+	}
+
+	# Web UI
+	handle_path /* {
+		rewrite * {uri}
+		reverse_proxy test.credentials-ui:8080
+	}
+}
+#</test>

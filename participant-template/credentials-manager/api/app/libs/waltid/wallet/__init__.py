@@ -1,0 +1,1 @@
+from .WalletClass import WalletClass

@@ -11,10 +11,7 @@
 #\____________________________________________________________________________________________________|
 
 import uvicorn
-from uvicorn.supervisors.watchgodreload import CustomWatcher
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
-
+import os
 import json
 import pprint
 import requests
@@ -29,9 +26,40 @@ from urllib.parse import quote, urlparse, parse_qs
 
 from fastapi import FastAPI, HTTPException, Depends, Security, Request, status, Query                    
 
+from libs.waltid.wallet import WalletClass
 
 # entry point                                                                              
 app = FastAPI(title="Data Cellar - Credentials Manager API", root_path="/api/v1")
+
+#---------------------------------------
+# Provision Wallet For Admin 
+#--------------------------------------- 
+WALLET_API_BASE_URL = os.getenv('WALLET_API_BASE_URL')
+WALLET_USER_NAME = os.getenv('WALLET_USER_NAME')
+WALLET_USER_EMAIL = os.getenv('WALLET_USER_EMAIL')
+WALLET_USER_PASSWORD = os.getenv('WALLET_USER_PASSWORD')
+DID_WEB_DOMAIN = os.getenv('DID_WEB_DOMAIN')
+
+kwargs = {
+        "wallet_api_base_url": WALLET_API_BASE_URL,
+        "email": WALLET_USER_EMAIL,
+        "password": WALLET_USER_PASSWORD,
+        "key_path" : "/certs",
+        "did_web_domain": DID_WEB_DOMAIN
+    }
+
+participant_wallet = WalletClass(**kwargs)
+dids = participant_wallet.find_did_by_alias(alias="datacellar")
+if (not len(dids)):
+    participant_did = participant_wallet.create_did_web(alias="datacellar", gx_compliance=True)
+else:
+    participant_did = dids[0]["did"]
+
+print(f"participant_did: {participant_did}")
+anchor_did_document = participant_wallet.get_did_document(did=participant_did)
+
+print(f"anchor_did_document")
+print(anchor_did_document)
 
 
 if __name__ == '__main__':
