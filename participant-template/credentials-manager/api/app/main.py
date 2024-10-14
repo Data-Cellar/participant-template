@@ -273,9 +273,9 @@ def vp_issuer_sign(request: Request, vp: VPDatacellar, did:str, use_legacy_catal
         "use_legacy_catalogue_signature": use_legacy_catalogue_signature
     }
     
-    #headers = {"X-API-KEY": "0164ca06-e718-49c5-8eb9-46e4a3fe1531"}
+    headers = {"X-API-KEY": "0164ca06-e718-49c5-8eb9-46e4a3fe1531"}
     try:
-        response = requests.post(url, params=params, json=presentation)
+        response = requests.post(url, headers=headers, params=params, json=presentation)
         response.raise_for_status()    
         credential_offer_url = response.json()["credential_offer_url"] 
         signed_vc = user_wallet.accept_credential_offer(did=did , credential_offer_url=credential_offer_url, uuid_str=uuid_str)        

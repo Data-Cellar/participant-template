@@ -18,7 +18,7 @@ dotenv: ['.env']
 #   SSI: true
 
 #   CONNECTOR_DIR: connector
-#   CONFIG_DIR: ./config
+#   CONNECTOR_CONFIG: ./config
 
 #   EDC_CONNECTOR_API_PORT: 9191          #/api
 #   EDC_CONNECTOR_MANAGEMENT_PORT: 9193   #/management
@@ -54,7 +54,7 @@ tasks:
       - task: config-caddyfile
       - task: config-credentials-manager
       
-
+  # caddy - Reverse proxy
   start-credentials-manager:
     desc: "Start Credentials Manager"
     deps:
@@ -68,6 +68,9 @@ tasks:
     cmds:
       - docker compose up --wait
   
+  
+  
+  # Credentials Manager
   stop-credentials-manager:
     desc: "Stop Credentials Manager"
     vars: 
@@ -78,7 +81,6 @@ tasks:
       - test -f docker-compose.yml
     cmds:
       - docker compose down
-  
   
   config-credentials-manager:
     vars: 
@@ -94,21 +96,32 @@ tasks:
       - sudo chown {{.USER}}:{{.USER}} {{.CREDENTIALS_MANAGER_PATH}}/data/vc/x5u.pem
       - curl -s https://letsencrypt.org/certs/isrgrootx1.pem >> {{.CREDENTIALS_MANAGER_PATH}}/data/vc/x5u.pem
 
-  config-caddyfile:
+  # Connector
+  config-connector:
     vars: 
-      DIR_PATH: '{{.USER_WORKING_DIR}}'
+        DIR_PATH: '{{.USER_WORKING_DIR}}'
+        CONNECTOR_PATH: '{{.USER_WORKING_DIR}}/edc-connector'
+        CONNECTOR_CONFIG: '{{.CONNECTOR_PATH}}/config'
     dir: '{{.DIR_PATH}}'
+    dotenv: ['{{.DIR_PATH}}/.env', '{{.CONNECTOR_PATH}}/.env']
+    cmds:
+      - envsubst < {{.CONNECTOR_CONFIG}}/connector.properties.tmpl > {{.CONNECTOR_CONFIG}}/connector.properties
+      - envsubst < {{.CONNECTOR_PATH}}/.env.tmpl > {{.CONNECTOR_PATH}}/.env
+      - task: create-certs
+
+  create-certs:
+    vars: 
+        DIR_PATH: '{{.USER_WORKING_DIR}}'
+        CONNECTOR_PATH: '{{.USER_WORKING_DIR}}/edc-connector'
+        CONNECTOR_CERTS: '{{.CONNECTOR_PATH}}/certs'
+    dir: '{{.CONNECTOR_CERTS}}'
     dotenv: ['{{.DIR_PATH}}/.env']
     cmds:
-      - envsubst < ./Caddyfile.tmpl > ./Caddyfile
-  
-
-
-  
+      - bash -c "OUT_DIR=./ KEY_ALIAS={{.KEY_ALIAS}} KEY_PASSW={{.KEY_PASSW}} SUBJECT={{.CERT_SUBJECT}} ./create-certs.sh"
   
   # config-all:
   #   cmds:
-  #     - envsubst < ./{{.CONFIG_DIR}}/connector.properties.tmpl > ./{{.CONFIG_DIR}}/connector.properties
+  #     - envsubst < ./{{.CONNECTOR_CONFIG}}/connector.properties.tmpl > ./{{.CONNECTOR_CONFIG}}/connector.properties
   #     - envsubst < .env.tmpl > .env
   #     - envsubst < ./caddy/Caddyfile.tmpl > ./caddy/Caddyfile
     
@@ -172,7 +185,7 @@ tasks:
   #   deps:
   #     - up-wallet
   #   cmds:
-  #     - sed -i '/^eu\.datacellar\.openapi\.url/ s/^/#/' ./{{.CONFIG_DIR}}/connector.properties
+  #     - sed -i '/^eu\.datacellar\.openapi\.url/ s/^/#/' ./{{.CONNECTOR_CONFIG}}/connector.properties
   #     - docker compose up -d broker backend --wait
   #     - docker compose up connector
 

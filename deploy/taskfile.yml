@@ -16,18 +16,27 @@ tasks:
       CERT_FOLDER: '{{.CERT_FOLDER}}'
       DOMAIN_NAME: 'datacellar.cosypoc.ovh'
     cmds:
-      - sh -c '[ -d "{{.PARTICIPANT_FOLDER}}" ] && cd {{.PARTICIPANT_FOLDER}} && task stop-all || echo "" ' 
-      - sh -c '[ -d "{{.PARTICIPANT_FOLDER}}" ] && sudo rm -R {{.PARTICIPANT_FOLDER}} || echo ""'
-      - mkdir -p {{.PARTICIPANT_FOLDER}}
-      - cp -R {{.PARTICIPANT_TEMPLATE}}/* {{.PARTICIPANT_FOLDER}}/
+      # - sh -c '[ -d "{{.PARTICIPANT_FOLDER}}" ] && cd {{.PARTICIPANT_FOLDER}} && task stop-all || echo "" ' 
+      # - sh -c '[ -d "{{.PARTICIPANT_FOLDER}}" ] && sudo rm -R {{.PARTICIPANT_FOLDER}} || echo ""'
+      # - mkdir -p {{.PARTICIPANT_FOLDER}}
+      # - cp -R {{.PARTICIPANT_TEMPLATE}}/* {{.PARTICIPANT_FOLDER}}/
       - envsubst < .env.tmpl > {{.PARTICIPANT_FOLDER}}/.env
-      - cd {{.PARTICIPANT_FOLDER}} && task config-all
 
-      - bash {{.PROXY_FOLDER}}/remove-config-section.sh {{.PROXY_FOLDER}}/Caddyfile {{.PARTICIPANT_NAME}}
-      - cat {{.PARTICIPANT_FOLDER}}/Caddyfile >> {{.PROXY_FOLDER}}/Caddyfile
-      - docker compose -f {{.PROXY_FOLDER}}/../docker-compose.yml restart caddy
+      # - bash {{.PROXY_FOLDER}}/remove-config-section.sh {{.PROXY_FOLDER}}/Caddyfile {{.PARTICIPANT_NAME}}
+      # - cd {{.PARTICIPANT_FOLDER}} && task config-caddyfile     
+      # - cat {{.PARTICIPANT_FOLDER}}/Caddyfile >> {{.PROXY_FOLDER}}/Caddyfile
+      # - docker compose -f {{.PROXY_FOLDER}}/../docker-compose.yml restart caddy
+      
+      # - sleep 3 #wait until CERTs created by Caddy
+      
+      # - cd {{.PARTICIPANT_FOLDER}} && task config-credentials-manager
+      # - cd {{.PARTICIPANT_FOLDER}} && task start-all
 
-      - cd {{.PARTICIPANT_FOLDER}} && task start-all
+      - sleep 2 #wait until Credential Manager and Wallet starts
+      
+      - cd {{.PARTICIPANT_FOLDER}} && task config-connector
+ 
+
 
 
 

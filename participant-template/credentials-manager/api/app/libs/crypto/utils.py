@@ -283,12 +283,14 @@ def base64url_encode(payload):
     encode = urlsafe_b64encode(payload)
     return encode.decode('utf-8').rstrip('=')
 
+
 def base64url_decode(payload: str) -> bytes:
     # Add padding if necessary. Base64 requires the string to be padded to a multiple of 4.
     padding = 4 - (len(payload) % 4)
     if padding != 4:
         payload += '=' * padding
     return urlsafe_b64decode(payload)
+
 
 def _base64url_decode(input_str):
     # Add padding if necessary to make it a valid base64 string

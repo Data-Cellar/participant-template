@@ -71,6 +71,9 @@ did_document = participant_wallet.get_did_document(did=participant_did)
 key_id = did_document["verificationMethod"][0]["publicKeyJwk"]["kid"]
 participant_key_jwk = participant_wallet.export_key_jwk(key_id=key_id, loadPrivateKey = True)
 
+print(participant_did)
+print(did_document)
+exit()
 
 credentials_ids = participant_wallet.get_credentials()
 for d in [item["id"] for item in credentials_ids]:
@@ -142,10 +145,13 @@ def vp_issuer_sign(vcs=[], did:str = "", use_legacy_catalogue_signature:bool = F
         "use_legacy_catalogue_signature": use_legacy_catalogue_signature,
         "did": did
     }
+    
     res = requests.post(url, headers=headers, params=params, json=data)
     res.raise_for_status()
     signed_vc = res.json()
     return signed_vc 
+
+
 
 print("get_terms_and_conditions")
 tsandcs  = get_terms_and_conditions()
