@@ -205,13 +205,12 @@ def get_legal_participant(request: Request, data: VCLegalParticipant, use_legacy
     except Exception as e:
         _logger.warning(f"Error Credentials OfferUrl {e}")
 
-
 class VPDatacellar(BaseModel): ##models
     id: str = ""
     verifiableCredential: List[Dict[str, Any]] = []
     
-@app.post("/vp/selfsigned", dependencies=[Depends(verify_token)], tags=["DataCellar"])
-def get_selfsigned_vp(request: Request, vp: VPDatacellar, did:str, use_legacy_catalogue_signature: bool = Query(False, description="Set to true to use legacy catalogue signature")):
+@app.post("/vp/self_sign", dependencies=[Depends(verify_token)], tags=["DataCellar"])
+def vp_self_sign(request: Request, vp: VPDatacellar, did:str, use_legacy_catalogue_signature: bool = Query(False, description="Set to true to use legacy catalogue signature")):
     wallet_token = get_wallet_token(request)
     user_wallet = WalletClass(**{**wallet_kwargs, "token":wallet_token})
     
@@ -249,10 +248,44 @@ def get_selfsigned_vp(request: Request, vp: VPDatacellar, did:str, use_legacy_ca
         
         return presentation
     except Exception as e:
-        _logger.warning(f"Error Credentials OfferUrl {e}")
+        _logger.warning(f"Error vp selfsigning {e}")
 
 
-
+@app.post("/vp/issuer_sign", dependencies=[Depends(verify_token)], tags=["DataCellar"])
+def vp_issuer_sign(request: Request, vp: VPDatacellar, did:str, use_legacy_catalogue_signature: bool = Query(False, description="Set to true to use legacy catalogue signature")):
+    wallet_token = get_wallet_token(request)
+    user_wallet = WalletClass(**{**wallet_kwargs, "token":wallet_token})
+    
+    presentation = {
+        "@context": ["https://www.w3.org/2018/credentials/v1"],
+        "type": ["VerifiablePresentation"],
+        "id": vp.id,
+        "verifiableCredential": vp.verifiableCredential,
+    }
+    
+    uuid_str = str(uuid.uuid4())
+    if (not presentation["id"]):
+        presentation["id"] = f"https://{DID_WEB_DOMAIN}/.well-known/{uuid_str}.json"
+    
+    url = f"{ISSUER_API_BASE_URL}/issuer/vp/sign"
+    headers={"Accept": "application/json"} 
+    params={
+        "use_legacy_catalogue_signature": use_legacy_catalogue_signature
+    }
+    
+    #headers = {"X-API-KEY": "0164ca06-e718-49c5-8eb9-46e4a3fe1531"}
+    try:
+        response = requests.post(url, params=params, json=presentation)
+        response.raise_for_status()    
+        credential_offer_url = response.json()["credential_offer_url"] 
+        signed_vc = user_wallet.accept_credential_offer(did=did , credential_offer_url=credential_offer_url, uuid_str=uuid_str)        
+        with open(f"/vc/{uuid_str}.json", "w") as f:
+            f.write(json.dumps( presentation, indent=4))
+        return signed_vc
+    except Exception as e:
+        _logger.warning(f"Error VP Issuer Sign  {e}") 
+        raise e
+       
 
 if __name__ == '__main__':
     uvicorn.run('main:app', host="0.0.0.0", port=8080, reload=False)

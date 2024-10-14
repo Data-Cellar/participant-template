@@ -96,7 +96,7 @@ class WalletClass:
         response = requests.post(url, json=data)
         response.raise_for_status()
         res_json = response.json()
-        _logger.info(res_json)
+        #_logger.info(res_json)
         return res_json["token"]
 
     def delete_user_in_waltiddb_by_email(self, email: str):
@@ -129,7 +129,7 @@ class WalletClass:
         res_accounts = requests.get(url_accounts, headers=headers)
         res_accounts.raise_for_status()
         res_accounts_json = res_accounts.json()
-        _logger.info(res_accounts_json)
+        #_logger.info(res_accounts_json)
         return res_accounts_json["wallets"][0]["id"]
 
     #-------------------------------------------------------

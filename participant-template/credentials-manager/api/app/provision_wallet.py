@@ -85,7 +85,6 @@ def get_terms_and_conditions():
     res = requests.post(url, headers=headers, params={"did":participant_did})
     res.raise_for_status()
     signed_vc = res.json()
-    _logger.info(signed_vc)
     return signed_vc
 
 def get_legal_registration_number():
@@ -94,7 +93,6 @@ def get_legal_registration_number():
     res = requests.post(url, headers=headers, params={"did":participant_did, "vatId": PARTICIPANT_VAT_ID})
     res.raise_for_status()
     signed_vc = res.json()
-    _logger.info(signed_vc)
     return signed_vc
 
 def get_legal_participant(legalRegistrationNumber: str, tsandcs: str, use_legacy_catalogue_signature:bool = False):
@@ -114,14 +112,13 @@ def get_legal_participant(legalRegistrationNumber: str, tsandcs: str, use_legacy
     res = requests.post(url, headers=headers, params=params, json={"did":participant_did})
     res.raise_for_status()
     signed_vc = res.json()
-    _logger.info(signed_vc)
     return signed_vc
 
-def vp_selfsigned(vcs=[], did:str = "", use_legacy_catalogue_signature:bool = False):
+def vp_self_sign(vcs=[], did:str = "", use_legacy_catalogue_signature:bool = False):
     headers = {"Authorization": "Bearer " + participant_wallet.token}
-    url = CREDENTIALS_MANAGER_API+ "/vp/selfsigned"
+    url = CREDENTIALS_MANAGER_API+ "/vp/self_sign"
     data={
-        "id" : ""
+        "id" : "",
         "verifiableCredential" : vcs
     }
     params={
@@ -131,19 +128,41 @@ def vp_selfsigned(vcs=[], did:str = "", use_legacy_catalogue_signature:bool = Fa
     res = requests.post(url, headers=headers, params=params, json=data)
     res.raise_for_status()
     signed_vc = res.json()
-    _logger.info(signed_vc)
     return signed_vc
     
-     
+
+def vp_issuer_sign(vcs=[], did:str = "", use_legacy_catalogue_signature:bool = False):
+    headers = {"Authorization": "Bearer " + participant_wallet.token}
+    url = CREDENTIALS_MANAGER_API+ "/vp/issuer_sign"
+    data={
+        "id" : "",
+        "verifiableCredential" : vcs
+    }
+    params={
+        "use_legacy_catalogue_signature": use_legacy_catalogue_signature,
+        "did": did
+    }
+    res = requests.post(url, headers=headers, params=params, json=data)
+    res.raise_for_status()
+    signed_vc = res.json()
+    return signed_vc 
 
 print("get_terms_and_conditions")
 tsandcs  = get_terms_and_conditions()
+print(tsandcs["id"])
 
 print("get_legal_registration_number")
 lrn = get_legal_registration_number()
+print(tsandcs["id"])
 
 print("get_legal_registration_number")
-lp = get_legal_participant(legalRegistrationNumber = lrn["id"], tsandcs=tsandcs["id"])
+lp = get_legal_participant(legalRegistrationNumber = lrn["id"], tsandcs=tsandcs["id"], use_legacy_catalogue_signature=True)
+print(lp["id"])
 
-print("selfsigned_vp")
-vp_lp_ss= vp_selfsigned(vcs = [tsandcs, lrn, lp], did=participant_did)
+print("self_sign_vp")
+vp_lp_ss= vp_self_sign(vcs = [tsandcs, lrn, lp ], did=participant_did, use_legacy_catalogue_signature=True)
+print(vp_lp_ss["id"])
+
+print("self_issuer_vp")
+vp_lp_is= vp_issuer_sign(vcs = [tsandcs, lrn, lp ], did=participant_did, use_legacy_catalogue_signature=True)
+print(vp_lp_is["id"])
