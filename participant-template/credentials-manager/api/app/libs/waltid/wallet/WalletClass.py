@@ -49,6 +49,7 @@ class WalletClass:
     password: Optional[str] = ""
     token: Optional[str] = ""
     wallet_id: Optional[str] = ""
+    force_create : Optional[bool] = False
     
     key_path: Optional[str] = ""
     key_id: Optional[str] = ""
@@ -88,7 +89,8 @@ class WalletClass:
             _logger.warning("User already exists.")
     
     def auth_login_wallet(self, email: str, password: str) -> str:
-        self.auth_create_wallet(email, password)
+        if (self.force_create):
+            self.auth_create_wallet(email, password)
         url = self.wallet_api_base_url + "/wallet-api/auth/login"
         data = {"type": "email", "email": email, "password": password}
         response = requests.post(url, json=data)
@@ -117,6 +119,7 @@ class WalletClass:
         finally:
             if conn:
                 conn.close()
+    
     #-------------------------------------------------------
     # Wallets Accounts
     #-------------------------------------------------------
@@ -345,6 +348,14 @@ class WalletClass:
        
         return credentials
     
+    def get_credential(self, credentialId: str) -> Dict:
+        url_credential = self.wallet_api_base_url + f"/wallet-api/wallet/{self.wallet_id}/credentials/{credentialId}"
+        headers = {"Authorization": "Bearer " + self.token}
+        res_credential = requests.get(url_credential, headers=headers)
+        res_credential.raise_for_status()
+        credential = res_credential.json()
+        return credential
+    
     def delete_credential(self, credentialId : str, permanent : bool = False):
         url_credential = self.wallet_api_base_url + f"/wallet-api/wallet/{self.wallet_id}/credentials/{urllib.parse.quote(credentialId, safe='')}"
         headers = {"Authorization": "Bearer " + self.token}
@@ -393,7 +404,7 @@ class WalletClass:
     #-------------------------------------------------------
     # Credential exchange
     #-------------------------------------------------------
-    def accept_credential_offer(self, did: str, credential_offer_url: str) -> dict:
+    def accept_credential_offer(self, did: str, credential_offer_url: str, uuid_str: str= "") -> dict:
         url_use_offer_request = self.wallet_api_base_url + f"/wallet-api/wallet/{self.wallet_id}/exchange/useOfferRequest"
         headers = {"Authorization": "Bearer " + self.token}
         
@@ -407,17 +418,28 @@ class WalletClass:
         )
         _logger.info(res_use_offer_request)
         
-        
         try:
             res_use_offer_request.raise_for_status()
             res_use_offer_request_json = res_use_offer_request.json()
-            _logger.info(pprint.pformat(res_use_offer_request_json))
-            urn = f"urn:uuid:{str(uuid.uuid4())}"
+            urn = uuid_str or f"{str(uuid.uuid4())}"
             self.update_credendial(id=res_use_offer_request_json[0]["id"],urn = urn)
-            _logger.info(pprint.pformat(res_use_offer_request_json))
-            return res_use_offer_request_json 
+           
+            jwt_vc_token = res_use_offer_request_json[0]["document"] 
+            signed_vc = self.get_vc_from_jwt(jwt=jwt_vc_token)
+            
+            with open(f"/vc/{urn}.json", "w") as f:
+                f.write(json.dumps( signed_vc, indent=4))
+            
+            return signed_vc 
         except requests.exceptions.HTTPError:
             _logger.error(res_use_offer_request.text)
             raise
+        
+    def get_vc_from_jwt(self, jwt : dict[str, any]):
+        try:  
+            header, payload = extract_jwt_header_payload(jwt)
+            return payload["vc"]        
+        except Exception as e:
+                print(f"Error: {e}")
 
            

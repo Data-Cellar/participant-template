@@ -67,25 +67,25 @@ ${PARTICIPANT_NAME}.${DOMAIN_NAME} {
 	# main API
 	handle_path /api/v1* {
 		rewrite * /api/v1{uri}
-		reverse_proxy ${PARTICIPANT_NAME}.credentials-ui:8080
+		reverse_proxy ${PARTICIPANT_NAME}.credentials-api:8080
 	}
 
 	# Swagger
 	handle_path /docs* {
-		rewrite * /docs{uri}
-		reverse_proxy ${PARTICIPANT_NAME}.credentials-ui:8080
+		rewrite * /docs
+		reverse_proxy ${PARTICIPANT_NAME}.credentials-api:8080
 	}
 
-	# Certs
-	handle_path /.well-known/cert.pem {
-		rewrite * /.well-known/cert.pem
+	# vc
+	handle_path /.well-known* {
+		rewrite * /.well-known{uri}
 		reverse_proxy ${PARTICIPANT_NAME}.web-server
 	}
 
 	# Web UI
 	handle_path /* {
 		rewrite * {uri}
-		reverse_proxy ${PARTICIPANT_NAME}.credentials-ui:8080
+		reverse_proxy ${PARTICIPANT_NAME}.credentials-api:8080
 	}
 }
 #</${PARTICIPANT_NAME}>

@@ -16,26 +16,18 @@ tasks:
       CERT_FOLDER: '{{.CERT_FOLDER}}'
       DOMAIN_NAME: 'datacellar.cosypoc.ovh'
     cmds:
-      # - sh -c '[ -d "{{.PARTICIPANT_FOLDER}}" ] && cd {{.PARTICIPANT_FOLDER}} && task stop-all || echo "" ' 
-      # - sh -c '[ -d "{{.PARTICIPANT_FOLDER}}" ] && sudo rm -R {{.PARTICIPANT_FOLDER}} || echo ""'
-      # - mkdir -p {{.PARTICIPANT_FOLDER}}
-      # - cp -R {{.PARTICIPANT_TEMPLATE}}/* {{.PARTICIPANT_FOLDER}}/
-      # - cp {{.USER_WORKING_DIR}}/.env {{.PARTICIPANT_FOLDER}}/.env
+      - sh -c '[ -d "{{.PARTICIPANT_FOLDER}}" ] && cd {{.PARTICIPANT_FOLDER}} && task stop-all || echo "" ' 
+      - sh -c '[ -d "{{.PARTICIPANT_FOLDER}}" ] && sudo rm -R {{.PARTICIPANT_FOLDER}} || echo ""'
+      - mkdir -p {{.PARTICIPANT_FOLDER}}
+      - cp -R {{.PARTICIPANT_TEMPLATE}}/* {{.PARTICIPANT_FOLDER}}/
       - envsubst < .env.tmpl > {{.PARTICIPANT_FOLDER}}/.env
-      # - sed -i '{{.SED_CMD}}' {{.PARTICIPANT_FOLDER}}/taskfile.yml
       - cd {{.PARTICIPANT_FOLDER}} && task config-all
 
       - bash {{.PROXY_FOLDER}}/remove-config-section.sh {{.PROXY_FOLDER}}/Caddyfile {{.PARTICIPANT_NAME}}
       - cat {{.PARTICIPANT_FOLDER}}/Caddyfile >> {{.PROXY_FOLDER}}/Caddyfile
-      #- docker compose -f {{.PROXY_FOLDER}}/../docker-compose.yml restart caddy
+      - docker compose -f {{.PROXY_FOLDER}}/../docker-compose.yml restart caddy
 
-      #- cd {{.PARTICIPANT_FOLDER}} && task start-all
-      # - cd {{.PARTICIPANT_FOLDER}} && task create-certs
-      
-      
-      
-      # - cd {{.PARTICIPANT_FOLDER}} && task up-wallet
-      # - cd {{.PARTICIPANT_FOLDER}} && task up-web-server
-      # - cd {{.PARTICIPANT_FOLDER}} && task provision-wallet
+      - cd {{.PARTICIPANT_FOLDER}} && task start-all
+
 
 

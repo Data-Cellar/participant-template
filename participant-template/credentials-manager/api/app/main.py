@@ -13,53 +13,245 @@
 import uvicorn
 import os
 import json
+import logging
+import coloredlogs
 import pprint
 import requests
 import string
 import uuid
 from jwt import PyJWKClient
 import jwt
+from jwcrypto.jws import JWK, JWS
 
 from pydantic import BaseModel
 from typing import Dict, List, Tuple, Union, Annotated, Optional, Any
 from urllib.parse import quote, urlparse, parse_qs
 
 from fastapi import FastAPI, HTTPException, Depends, Security, Request, status, Query                    
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
 
 from libs.waltid.wallet import WalletClass
+from libs.crypto.utils import create_proof
+
+logging.basicConfig(level=logging.INFO)
+_logger = logging.getLogger(__name__)
 
 # entry point                                                                              
 app = FastAPI(title="Data Cellar - Credentials Manager API", root_path="/api/v1")
 
-#---------------------------------------
-# Provision Wallet For Admin 
-#--------------------------------------- 
+security = HTTPBearer()
+
+
 WALLET_API_BASE_URL = os.getenv('WALLET_API_BASE_URL')
-WALLET_USER_NAME = os.getenv('WALLET_USER_NAME')
-WALLET_USER_EMAIL = os.getenv('WALLET_USER_EMAIL')
-WALLET_USER_PASSWORD = os.getenv('WALLET_USER_PASSWORD')
 DID_WEB_DOMAIN = os.getenv('DID_WEB_DOMAIN')
+#ISSUER_API_BASE_URL = os.getenv('ISSUER_API_BASE_URL') or 'https://idp.datacellar.cosypoc.ovh/api/v1'
+ISSUER_API_BASE_URL = 'https://idp.datacellar.cosypoc.ovh/api/v1'
 
-kwargs = {
-        "wallet_api_base_url": WALLET_API_BASE_URL,
-        "email": WALLET_USER_EMAIL,
-        "password": WALLET_USER_PASSWORD,
-        "key_path" : "/certs",
-        "did_web_domain": DID_WEB_DOMAIN
+
+wallet_kwargs = {
+    "wallet_api_base_url": WALLET_API_BASE_URL,
+    "did_web_domain": DID_WEB_DOMAIN
+}
+
+
+def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
+    token = credentials.credentials
+    try:
+        test_wallet = WalletClass(**{**wallet_kwargs, "token":token})
+        test_wallet.get_first_wallet_id()
+    except:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or expired token",
+            headers={"Authorization": "Bearer"},
+        )
+
+def get_wallet_token(request: Request):
+    auth_header = request.headers.get("Authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        wallet_token = auth_header.split("Bearer ")[1]
+        return wallet_token
+    else:
+        raise HTTPException(status_code=401, detail="Authorization header missing or invalid")
+
+
+class WalletLogin(BaseModel): ## models
+    email: str = "admin@datacellar.com"
+    password : str = "admin_d@t@ce!!ar"
+    
+@app.post("/login", tags=["Auth"])
+def login(request: Request, data: WalletLogin):
+    user_wallet = WalletClass(**{**wallet_kwargs, "email":data.email, "password":data.password})
+    return { "token" : user_wallet.token}
+
+@app.get("/dids", dependencies=[Depends(verify_token)], tags=["DID"])
+def get_dids(request: Request):
+    wallet_token = get_wallet_token(request)
+    user_wallet = WalletClass(**{**wallet_kwargs, "token":wallet_token})
+    dids = user_wallet.find_did_by_alias(alias="datacellar")
+    return dids
+
+@app.get("/credentials", dependencies=[Depends(verify_token)], tags=["Credentials"])
+def get_credentials(request: Request):
+    wallet_token = get_wallet_token(request)
+    user_wallet = WalletClass(**{**wallet_kwargs, "token":wallet_token})
+    credentials = user_wallet.get_credentials()
+    return credentials
+
+@app.get("/credentials/{credentialId}", dependencies=[Depends(verify_token)], tags=["Credentials"])
+def view_credential(request: Request, credentialId:str):
+    wallet_token = get_wallet_token(request)
+    user_wallet = WalletClass(**{**wallet_kwargs, "token":wallet_token})
+    credential = user_wallet.get_credential(credentialId=credentialId)
+    return credential
+
+@app.delete("/credentials/{credentialId}", dependencies=[Depends(verify_token)], tags=["Credentials"])
+def delete_credential(request: Request, credentialId:str):
+    wallet_token = get_wallet_token(request)
+    user_wallet = WalletClass(**{**wallet_kwargs, "token":wallet_token})
+    user_wallet.delete_credential(credentialId=credentialId, permanent=True)
+    return { "credentialId" : credentialId }
+
+@app.post("/credentials/useOfferRequest", dependencies=[Depends(verify_token)], tags=["Credentials"])
+def accept_credential_offer(request: Request, did: str, credential_offer_url = str):
+    wallet_token = get_wallet_token(request)
+    user_wallet = WalletClass(**{**wallet_kwargs, "token":wallet_token})
+    uuid_str = str(uuid.uuid4())
+    try:
+        signed_vc = user_wallet.accept_credential_offer(did=did , credential_offer_url=credential_offer_url, uuid_str=uuid_str)        
+        return signed_vc
+    except Exception as e:
+        _logger.warning(f"Error Credentials OfferUrl {e}")
+
+
+@app.post("/vc/TermsAndConditions", dependencies=[Depends(verify_token)], tags=["DataCellar"])
+def get_terms_and_conditions(request: Request, did: str):
+    
+    wallet_token = get_wallet_token(request)
+    user_wallet = WalletClass(**{**wallet_kwargs, "token":wallet_token})
+    
+    url = ISSUER_API_BASE_URL + "/issuer/vc/TermsAndConditions"
+    uuid_str = str(uuid.uuid4())
+    data = {
+        "id": f"https://{DID_WEB_DOMAIN}/.well-known/{uuid_str}.json",
+        "did": did
     }
+    try:
+        response = requests.post(url, json=data)
+        response.raise_for_status()    
+        credential_offer_url = response.json()["credential_offer_url"] 
+        signed_vc = user_wallet.accept_credential_offer(did=did , credential_offer_url=credential_offer_url, uuid_str=uuid_str)        
+        return signed_vc
+    except Exception as e:
+        _logger.warning(f"Error Credentials OfferUrl {e}")
 
-participant_wallet = WalletClass(**kwargs)
-dids = participant_wallet.find_did_by_alias(alias="datacellar")
-if (not len(dids)):
-    participant_did = participant_wallet.create_did_web(alias="datacellar", gx_compliance=True)
-else:
-    participant_did = dids[0]["did"]
+@app.post("/vc/LegalRegistrationNumber", dependencies=[Depends(verify_token)], tags=["DataCellar"])
+def get_legal_registration_number(request: Request, did: str, vatId: str = "FR43775685019"):
+    wallet_token = get_wallet_token(request)
+    user_wallet = WalletClass(**{**wallet_kwargs, "token":wallet_token})
+    
+    url = ISSUER_API_BASE_URL + "/issuer/vc/LegalRegistrationNumber"
+    uuid_str = str(uuid.uuid4())
+    data = {
+        "id": f"https://{DID_WEB_DOMAIN}/.well-known/{uuid_str}.json",
+        "vatId": vatId
+    }
+    print(data)
+    try:
+        response = requests.post(url, json=data)
+        response.raise_for_status()    
+        credential_offer_url = response.json()["credential_offer_url"] 
+        signed_vc = user_wallet.accept_credential_offer(did=did , credential_offer_url=credential_offer_url, uuid_str=uuid_str)        
+        return signed_vc
+    except Exception as e:
+        _logger.warning(f"Error Credentials OfferUrl {e}")
 
-print(f"participant_did: {participant_did}")
-anchor_did_document = participant_wallet.get_did_document(did=participant_did)
+class VCLegalParticipant(BaseModel): ##models
+    did: str = "did:web:participanta.datacellar.cosypoc.ovh:wallet-api:registry:25051bf1-ab6d-49b4-acb5-c18f38a354c6"
+    legalName: str = "CEA"
+    countrySubdivisionCode: str = "FR-OCC"
+    legalRegistrationNumber: str = "https://participanta.datacellar.cosypoc.ovh/.well-known/8d6aceb3-f928-4b92-9daf-fcf6cd634359.json"
+    tsandcs: str = "https://participanta.datacellar.cosypoc.ovh/.well-known/061a2ac5-1d1d-4cde-967f-62e106f58d89.json"
+    
+@app.post("/vc/LegalParticipant", dependencies=[Depends(verify_token)], tags=["DataCellar"])
+def get_legal_participant(request: Request, data: VCLegalParticipant, use_legacy_catalogue_signature: bool = Query(False, description="Set to true to use legacy catalogue signature")):
+    wallet_token = get_wallet_token(request)
+    user_wallet = WalletClass(**{**wallet_kwargs, "token":wallet_token})
+    
+    url = f"{ISSUER_API_BASE_URL}/issuer/vc/LegalParticipant"
+    headers={"Accept": "application/json"}  
+    
+    uuid_str = str(uuid.uuid4())
+    payload = {
+        "id" : f"https://{DID_WEB_DOMAIN}/.well-known/{uuid_str}.json",
+        "did" : data.did,
+        "legalName" : data.legalName,
+        "countrySubdivisionCode" : data.countrySubdivisionCode,
+        "legalRegistrationNumber" : data.legalRegistrationNumber,
+        "tsandcs" : data.tsandcs
+    }
+    
+    params={
+        "use_legacy_catalogue_signature": use_legacy_catalogue_signature
+    }
+    
+    try:
+        response = requests.post(url, params=params, json=payload)
+        response.raise_for_status()    
+        credential_offer_url = response.json()["credential_offer_url"] 
+        signed_vc = user_wallet.accept_credential_offer(did=data.did , credential_offer_url=credential_offer_url, uuid_str=uuid_str)        
+        return signed_vc
+    except Exception as e:
+        _logger.warning(f"Error Credentials OfferUrl {e}")
 
-print(f"anchor_did_document")
-print(anchor_did_document)
+
+class VPDatacellar(BaseModel): ##models
+    id: str = ""
+    verifiableCredential: List[Dict[str, Any]] = []
+    
+@app.post("/vp/selfsigned", dependencies=[Depends(verify_token)], tags=["DataCellar"])
+def get_selfsigned_vp(request: Request, vp: VPDatacellar, did:str, use_legacy_catalogue_signature: bool = Query(False, description="Set to true to use legacy catalogue signature")):
+    wallet_token = get_wallet_token(request)
+    user_wallet = WalletClass(**{**wallet_kwargs, "token":wallet_token})
+    
+    presentation = {
+        "@context": ["https://www.w3.org/2018/credentials/v1"],
+        "type": ["VerifiablePresentation"],
+        "id": vp.id,
+        "verifiableCredential": vp.verifiableCredential,
+    }
+    
+    uuid_str = str(uuid.uuid4())
+    if (not presentation["id"]):
+        presentation["id"] = f"https://{DID_WEB_DOMAIN}/.well-known/{uuid_str}.json"
+    
+    did_document = user_wallet.get_did_document(did=did)
+    key_id = did_document["verificationMethod"][0]["publicKeyJwk"]["kid"]
+    jwk_key = user_wallet.export_key_jwk(key_id=key_id, loadPrivateKey = True)
+    signature_jwk = JWK(**jwk_key)  
+    
+    verification_method=f"{did}#{jwk_key['kid']}"
+    
+    vp_payload = {
+        "@context": ["https://www.w3.org/2018/credentials/v1"],
+        "type": ["VerifiablePresentation"],
+        "verifiableCredential": presentation["verifiableCredential"],
+    }
+       
+    try:
+        proof = create_proof(credential=vp_payload, signature_jwk=signature_jwk, verification_method=verification_method, use_legacy_catalogue_signature=use_legacy_catalogue_signature)
+        presentation['proof'] = proof
+        
+        print(f"selsigned presentation {presentation['id']}")
+        with open(f"/vc/{uuid_str}.json", "w") as f:
+            f.write(json.dumps( presentation, indent=4))
+        
+        return presentation
+    except Exception as e:
+        _logger.warning(f"Error Credentials OfferUrl {e}")
+
+
 
 
 if __name__ == '__main__':

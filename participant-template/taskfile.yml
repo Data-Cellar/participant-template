@@ -2,42 +2,42 @@ version: "3"
 
 dotenv: ['.env']
 
-env:
-  PARTICIPANT_NAME: test
-  # DOMAIN_NAME: '{{.DOMAIN_NAME}}'
+# env:
+#   PARTICIPANT_NAME: test
+#   # DOMAIN_NAME: '{{.DOMAIN_NAME}}'
   
-  # ISSUER_API_BASE_URL: "{{.ISSUER_API_BASE_URL}}"
-  # ISSUER_DID: '{{.ISSUER_DID}}'
-  # ISSUER_API_KEY: '{{.ISSUER_API_KEY}}'
+#   # ISSUER_API_BASE_URL: "{{.ISSUER_API_BASE_URL}}"
+#   # ISSUER_DID: '{{.ISSUER_DID}}'
+#   # ISSUER_API_KEY: '{{.ISSUER_API_KEY}}'
   
-  # VERIFIER_API_BASE_URL: '{{.ISSUER_API_BASE_URL}}'
+#   # VERIFIER_API_BASE_URL: '{{.ISSUER_API_BASE_URL}}'
 
-  EDCPY_IMAGE: edcpy
-  SCRIPTS_IMAGE: edc-scripts
+#   EDCPY_IMAGE: edcpy
+#   SCRIPTS_IMAGE: edc-scripts
 
-  SSI: true
+#   SSI: true
 
-  CONNECTOR_DIR: connector
-  CONFIG_DIR: ./config
+#   CONNECTOR_DIR: connector
+#   CONFIG_DIR: ./config
 
-  EDC_CONNECTOR_API_PORT: 9191          #/api
-  EDC_CONNECTOR_MANAGEMENT_PORT: 9193   #/management
-  EDC_CONNECTOR_PROTOCOL_PORT: 9194     #/protocol
-  EDC_CONNECTOR_CONTROL_PORT: 9192      #/control
-  EDC_CONNECTOR_PUBLIC_PORT: 9291       #/public
+#   EDC_CONNECTOR_API_PORT: 9191          #/api
+#   EDC_CONNECTOR_MANAGEMENT_PORT: 9193   #/management
+#   EDC_CONNECTOR_PROTOCOL_PORT: 9194     #/protocol
+#   EDC_CONNECTOR_CONTROL_PORT: 9192      #/control
+#   EDC_CONNECTOR_PUBLIC_PORT: 9291       #/public
 
-  EDC_BACKEND_PORT: 8080
+#   EDC_BACKEND_PORT: 8080
 
-  RABBITMQ_PORT: 5672
-  RABBITMQ_DEFAULT_USER: guest
-  RABBITMQ_DEFAULT_PASS: guest
+#   RABBITMQ_PORT: 5672
+#   RABBITMQ_DEFAULT_USER: guest
+#   RABBITMQ_DEFAULT_PASS: guest
 
-  CERTS_DIR: ./certs
-  KEY_ALIAS: datacellar
-  KEY_PASSW: datacellar
-  CERT_SUBJECT: '/C=FR/ST=Toulouse/L=Labege/O=CEA/OU=CEA/CN={{.PARTICIPANT_NAME}}.{{.DOMAIN_NAME}}'
+#   CERTS_DIR: ./certs
+#   KEY_ALIAS: datacellar
+#   KEY_PASSW: datacellar
+#   CERT_SUBJECT: '/C=FR/ST=Toulouse/L=Labege/O=CEA/OU=CEA/CN={{.PARTICIPANT_NAME}}.{{.DOMAIN_NAME}}'
  
-  DID_WEB_DOMAIN: '{{.PARTICIPANT_NAME}}.{{.DOMAIN_NAME}}'
+#   DID_WEB_DOMAIN: '{{.PARTICIPANT_NAME}}.{{.DOMAIN_NAME}}'
   
 
 tasks:
@@ -79,15 +79,21 @@ tasks:
     cmds:
       - docker compose down
   
+  
   config-credentials-manager:
     vars: 
-      DIR_PATH: '{{.USER_WORKING_DIR}}/credentials-manager'
+      DIR_PATH: '{{.USER_WORKING_DIR}}'
+      CREDENTIALS_MANAGER_PATH: '{{.USER_WORKING_DIR}}/credentials-manager'
     dir: '{{.DIR_PATH}}'
     dotenv: ['{{.DIR_PATH}}/.env']
     cmds:
-      - envsubst < .env.tmpl > .env
-      - cd {{.DIR_PATH}}/waltid && sudo chmod 755 data && sudo chown -R 1001:1001 data
-  
+      - envsubst < {{.CREDENTIALS_MANAGER_PATH}}/.env.tmpl > {{.CREDENTIALS_MANAGER_PATH}}/.env
+      - cd {{.CREDENTIALS_MANAGER_PATH}}/waltid && sudo chmod 755 data && sudo chown -R 1001:1001 data
+      - cd {{.CREDENTIALS_MANAGER_PATH}}/data && sudo chmod -R 755 vc
+      - sudo cp {{.CERT_FOLDER}}/{{.DID_WEB_DOMAIN}}/{{.DID_WEB_DOMAIN}}.crt {{.CREDENTIALS_MANAGER_PATH}}/data/vc/x5u.pem
+      - sudo chown {{.USER}}:{{.USER}} {{.CREDENTIALS_MANAGER_PATH}}/data/vc/x5u.pem
+      - curl -s https://letsencrypt.org/certs/isrgrootx1.pem >> {{.CREDENTIALS_MANAGER_PATH}}/data/vc/x5u.pem
+
   config-caddyfile:
     vars: 
       DIR_PATH: '{{.USER_WORKING_DIR}}'
