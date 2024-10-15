@@ -1,0 +1,32 @@
+#-------------------------------------------------------------------
+# authors     [ Radhouene AZZABI ]
+# contacts    [ azzabi.radhouene@cea.fr ]
+# created     2024-10-15 12:36:03
+# modified    2024-10-15 12:35:49
+# version     1.0.0
+#-------------------------------------------------------------------
+
+version: "3"
+
+# dotenv: ['../.env'] # uncomment if you want to test tasks localy
+
+tasks:
+  start:
+    desc: "Start Wallet"
+    deps:
+      - config
+    dir: '{{.PARTICIPANT_FOLDER}}'
+    cmds:
+      - docker compose up wallet -d --wait
+  
+  stop:
+    desc: "Stop Wallet"
+    dir: '{{.PARTICIPANT_FOLDER}}'
+    cmds:
+        - docker compose stop wallet
+  
+  config:
+    desc: "Config Wallet"
+    dir: '{{.WALLET_FOLDER}}/waltid'
+    cmds:
+      - sudo chmod 755 data && sudo chown -R 1001:1001 data

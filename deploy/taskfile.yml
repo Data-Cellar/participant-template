@@ -1,4 +1,16 @@
+#-------------------------------------------------------------------
+# authors     [ Radhouene AZZABI ]
+# contacts    [ azzabi.radhouene@cea.fr ]
+# created     2024/10-15T12:12:24
+# modified    2024/10-15T12:12:24
+# version     1.0.0
+#-------------------------------------------------------------------
+
 version: "3"
+
+env:
+  DOMAIN_NAME: 'datacellar.cosypoc.ovh'
+
 
 tasks:
 
@@ -7,34 +19,33 @@ tasks:
     vars:
       PARTICIPANT_NAME : '{{.CLI_ARGS}}'
       PARTICIPANT_TEMPLATE : '{{.USER_WORKING_DIR}}/../participant-template/'
-      PARTICIPANT_FOLDER: './participants/{{.PARTICIPANT_NAME}}'
-      PROXY_FOLDER: '/home/debian/datacellar/datacellar-mvd/reverse-proxy/caddy'
-      CERT_FOLDER: '{{.PROXY_FOLDER}}/certs'
-      SED_CMD: 's/PARTICIPANT_NAME: companyX/PARTICIPANT_NAME: {{.PARTICIPANT_NAME}}/g'
+      PARTICIPANT_FOLDER: '{{.USER_WORKING_DIR}}/participants/{{.PARTICIPANT_NAME}}'
+      EXTERNAL_PROXY_FOLDER: '/home/debian/datacellar/datacellar-mvd/reverse-proxy/caddy'
+      # CERT_FOLDER: '{{.PROXY_FOLDER}}/certs'
+      # SED_CMD: 's/PARTICIPANT_NAME: companyX/PARTICIPANT_NAME: {{.PARTICIPANT_NAME}}/g'
     env:
       PARTICIPANT_NAME: '{{.PARTICIPANT_NAME}}'
-      CERT_FOLDER: '{{.CERT_FOLDER}}'
-      DOMAIN_NAME: 'datacellar.cosypoc.ovh'
+      PARTICIPANT_FOLDER: '{{.PARTICIPANT_FOLDER}}'
+      
     cmds:
-      # - sh -c '[ -d "{{.PARTICIPANT_FOLDER}}" ] && cd {{.PARTICIPANT_FOLDER}} && task stop-all || echo "" ' 
-      # - sh -c '[ -d "{{.PARTICIPANT_FOLDER}}" ] && sudo rm -R {{.PARTICIPANT_FOLDER}} || echo ""'
-      # - mkdir -p {{.PARTICIPANT_FOLDER}}
-      # - cp -R {{.PARTICIPANT_TEMPLATE}}/* {{.PARTICIPANT_FOLDER}}/
-      - envsubst < .env.tmpl > {{.PARTICIPANT_FOLDER}}/.env
+      - sh -c '[ -d "{{.PARTICIPANT_FOLDER}}" ] && cd {{.PARTICIPANT_FOLDER}} && task stop-all || echo "" ' 
+      - sh -c '[ -d "{{.PARTICIPANT_FOLDER}}" ] && sudo rm -R {{.PARTICIPANT_FOLDER}} || echo ""'
+      - mkdir -p {{.PARTICIPANT_FOLDER}}
+      - cp -R {{.PARTICIPANT_TEMPLATE}}/* {{.PARTICIPANT_FOLDER}}/
+      - envsubst < {{.PARTICIPANT_TEMPLATE}}/.env.tmpl > {{.PARTICIPANT_FOLDER}}/.env
 
-      # - bash {{.PROXY_FOLDER}}/remove-config-section.sh {{.PROXY_FOLDER}}/Caddyfile {{.PARTICIPANT_NAME}}
-      # - cd {{.PARTICIPANT_FOLDER}} && task config-caddyfile     
-      # - cat {{.PARTICIPANT_FOLDER}}/Caddyfile >> {{.PROXY_FOLDER}}/Caddyfile
-      # - docker compose -f {{.PROXY_FOLDER}}/../docker-compose.yml restart caddy
+      - cd {{.PARTICIPANT_FOLDER}} && task config-all
+      - cp {{.PARTICIPANT_FOLDER}}/reverse-proxy/caddy/conf.d/{{.PARTICIPANT_NAME}}.caddy {{.EXTERNAL_PROXY_FOLDER}}/conf.d/{{.PARTICIPANT_NAME}}.caddy
+      - docker compose -f {{.EXTERNAL_PROXY_FOLDER}}/../docker-compose.yml restart caddy
       
       # - sleep 3 #wait until CERTs created by Caddy
       
       # - cd {{.PARTICIPANT_FOLDER}} && task config-credentials-manager
       # - cd {{.PARTICIPANT_FOLDER}} && task start-all
 
-      - sleep 2 #wait until Credential Manager and Wallet starts
+      # - sleep 2 #wait until Credential Manager and Wallet starts
       
-      - cd {{.PARTICIPANT_FOLDER}} && task config-connector
+      # - cd {{.PARTICIPANT_FOLDER}} && task config-connector
  
 
 

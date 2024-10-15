@@ -1,0 +1,26 @@
+
+services:
+
+  did-server:
+    image: nginx
+    container_name: ${PARTICIPANT_NAME}.did-server
+    restart: unless-stopped
+    volumes:
+      - ${CREDENTIALS_FOLDER}/.well-known:/usr/share/nginx/html/.well-known
+      - ${CREDENTIALS_FOLDER}/vc:/usr/share/nginx/html/vc
+      - ${CREDENTIALS_FOLDER}/vp:/usr/share/nginx/html/vp
+    # ports:
+    #   - "80:80"
+    networks:
+        - datacellar
+
+networks:
+  datacellar:
+    driver: bridge
+    name: datacellar_network
+    ipam:
+     config:
+       - subnet: 192.168.0.0/24
+         gateway: 192.168.0.1
+    driver_opts:
+      com.docker.network.bridge.name: br_datacellar

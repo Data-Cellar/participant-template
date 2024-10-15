@@ -1,0 +1,65 @@
+#-------------------------------------------------------------------
+# authors     [ Radhouene AZZABI ]
+# contacts    [ azzabi.radhouene@cea.fr ]
+# created     2024/10-15T12:12:24
+# modified    2024/10-15T12:12:24
+# version     1.0.0
+#-------------------------------------------------------------------
+
+version: "3"
+
+
+# dotenv: ['../.env'] # uncomment if you want to test tasks localy
+
+tasks:
+  
+  # Credentials Manager Webui
+  start-api:
+    desc: "Start Credentials Manager API"
+    deps:
+      - config-credentials-manager
+    vars: 
+      DIR_PATH: '{{.USER_WORKING_DIR}}/credentials-manager'
+    dir: '{{.DIR_PATH}}'
+    dotenv: ['{{.DIR_PATH}}/.env']
+    preconditions:
+      - test -f docker-compose.yml
+    cmds:
+      - docker compose up --wait
+    
+  stop-api:
+    desc: "Stop Credentials Manager"
+    vars: 
+      DIR_PATH: '{{.USER_WORKING_DIR}}/credentials-manager'
+    dir: '{{.DIR_PATH}}'
+    dotenv: ['{{.DIR_PATH}}/.env']
+    preconditions:
+      - test -f docker-compose.yml
+    cmds:
+      - docker compose down
+  
+
+  # Credentials Manager Webui
+  start-webui:
+    desc: "Start Credentials Manager Webui"
+    deps:
+      - config-credentials-manager
+    vars: 
+      DIR_PATH: '{{.USER_WORKING_DIR}}/credentials-manager'
+    dir: '{{.DIR_PATH}}'
+    dotenv: ['{{.DIR_PATH}}/.env']
+    preconditions:
+      - test -f docker-compose.yml
+    cmds:
+      - docker compose up --wait
+    
+  stop-webui:
+    desc: "Stop Credentials Manager Webui"
+    vars: 
+      DIR_PATH: '{{.USER_WORKING_DIR}}/credentials-manager'
+    dir: '{{.DIR_PATH}}'
+    dotenv: ['{{.DIR_PATH}}/.env']
+    preconditions:
+      - test -f docker-compose.yml
+    cmds:
+      - docker compose down

@@ -2,7 +2,7 @@
 services:
 
   wallet:
-    image: waltid/wallet-api:${WALTID_VERSION}
+    image: waltid/wallet-api:${WALTID_IMG_VERSION}
     container_name: ${PARTICIPANT_NAME}.wallet
     restart: unless-stopped
     volumes:
@@ -19,18 +19,18 @@ services:
       retries: 3
       start_period: 5s
 
-  web-server:
+  did-server:
     image: nginx
-    container_name: ${PARTICIPANT_NAME}.web-server
+    container_name: ${PARTICIPANT_NAME}.did-server
     restart: unless-stopped
     volumes:
       - ./data/vc:/usr/share/nginx/html/.well-known
     # ports:
-    #   - "7070:80"
+    #   - "80:80"
     networks:
         - datacellar
 
-  api:
+  credendials-api:
     image: datacellar/credentials-api:${CREDENTIALS_API_IMAGE_VERSION}
     build: ./api
     container_name: ${PARTICIPANT_NAME}.credentials-api
@@ -42,15 +42,50 @@ services:
       - ./waltid/data:/waltid
     depends_on:
       - wallet
-      - web-server
+      - did-server
     # ports:
-    #   - 8030:8080
+    #   - 8080:8080
     env_file:
       - .env
     networks:
       - datacellar
     entrypoint: sh -c "sleep infinity"
     #entrypoint: sh -c "pm2 start main.py --name api --interpreter python3 && pm2 logs api"
+
+  edc-connector:
+    image: ${EDC_CONNECTOR_IMG}:${EDC_CONNECTOR_IMG_VERSION}
+    container_name: ${PARTICIPANT_NAME}.connector
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        CLEAN: "${CLEAN:-true}"   
+        SSI: "${SSI:-false}"
+    restart: unless-stopped      
+    environment:
+      ORG_GRADLE_PROJECT_useSSI: "${SSI:-false}"
+    # ports:
+      # - 29191:${EDC_CONNECTOR_API_PORT}
+      # - 29192:${EDC_CONNECTOR_CONTROL_PORT}
+      # - 29193:${EDC_CONNECTOR_MANAGEMENT_PORT}
+      # - 29194:${EDC_CONNECTOR_PROTOCOL_PORT}
+      # - 29291:${EDC_CONNECTOR_PUBLIC_PORT}
+    volumes:
+      - ./certs:/opt/src/certs
+      - ./config:/opt/src/config
+      - ./connector:/opt/src/connector
+    command:
+      [
+        java,
+        -Dedc.fs.config=/opt/src/config/connector.properties,
+        -Dedc.keystore=/opt/src/certs/cert.pfx,
+        -Dedc.keystore.password=datacellar,
+        -Dedc.vault=/opt/src/certs/vault.properties,
+        -jar,
+        /opt/src/connector/openapi-connector/build/libs/openapi-connector.jar,
+      ]
+    networks:
+      - datacellar
 
 
 networks:

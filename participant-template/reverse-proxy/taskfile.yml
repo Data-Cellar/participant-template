@@ -1,0 +1,28 @@
+#-------------------------------------------------------------------
+# authors     [ Radhouene AZZABI ]
+# contacts    [ azzabi.radhouene@cea.fr ]
+# created     2024/10-15T12:12:24
+# modified    2024/10-15T12:12:24
+# version     1.0.0
+#-------------------------------------------------------------------
+
+version: "3"
+
+#dotenv: ['../.env'] # uncomment if you want to test tasks localy
+
+tasks:
+  start:
+    desc: "Start Reverse Proxy"
+    deps:
+      - config
+    cmds:
+      - docker compose up caddy -d --wait
+  
+  stop:
+    cmds:
+        - docker compose caddy did-server
+  
+  config:
+    dir: '{{.PROXY_FOLDER}}/caddy/conf.d'
+    cmds:
+      - envsubst < participant.caddy.tmpl > {{.PARTICIPANT_NAME}}.caddy

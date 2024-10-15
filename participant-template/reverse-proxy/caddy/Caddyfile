@@ -1,0 +1,21 @@
+{
+	# Global options block.
+
+	# TLS Options
+	email radhouene.azzabi@cea.fr
+	
+	# key_type  ed25519|p256|p384|rsa2048|rsa4096
+	key_type rsa2048
+	cert_issuer acme {
+		email radhouene.azzabi@cea.fr
+		preferred_chains {
+			root_common_name "ISRG Root X1"
+		}
+	}
+	log {
+		level  error
+	}
+
+}
+
+import conf.d/*.caddy

@@ -1,0 +1,33 @@
+#-------------------------------------------------------------------
+# authors     [ Radhouene AZZABI ]
+# contacts    [ azzabi.radhouene@cea.fr ]
+# created     2024/10-15T12:12:24
+# modified    2024/10-15T12:12:24
+# version     1.0.0
+#-------------------------------------------------------------------
+
+version: "3"
+
+
+# dotenv: ['../.env'] # uncomment if you want to test tasks localy
+
+tasks:
+  start:
+    desc: "Start DID Server"
+    deps:
+      - config
+    dir: '{{.PARTICIPANT_FOLDER}}'
+    cmds:
+      - docker compose up did-server -d --wait
+  
+  stop:
+    desc: "Stop DID Server"
+    dir: '{{.PARTICIPANT_FOLDER}}'
+    cmds:
+        - docker compose stop did-server
+  
+  config:
+    desc: "Config DID Server"
+    dir: '{{.PARTICIPANT_FOLDER}}/{{.STORE_FOLDER}}'
+    cmds:
+      - sudo chmod -R 755 credentials

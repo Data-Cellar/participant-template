@@ -1,198 +1,281 @@
+#-------------------------------------------------------------------
+# authors     [ Radhouene AZZABI ]
+# contacts    [ azzabi.radhouene@cea.fr ]
+# created     2024/10-15T12:12:24
+# modified    2024/10-15T12:12:24
+# version     1.0.0
+#-------------------------------------------------------------------
+
 version: "3"
 
 dotenv: ['.env']
 
-# env:
-#   PARTICIPANT_NAME: test
-#   # DOMAIN_NAME: '{{.DOMAIN_NAME}}'
-  
-#   # ISSUER_API_BASE_URL: "{{.ISSUER_API_BASE_URL}}"
-#   # ISSUER_DID: '{{.ISSUER_DID}}'
-#   # ISSUER_API_KEY: '{{.ISSUER_API_KEY}}'
-  
-#   # VERIFIER_API_BASE_URL: '{{.ISSUER_API_BASE_URL}}'
-
-#   EDCPY_IMAGE: edcpy
-#   SCRIPTS_IMAGE: edc-scripts
-
-#   SSI: true
-
-#   CONNECTOR_DIR: connector
-#   CONNECTOR_CONFIG: ./config
-
-#   EDC_CONNECTOR_API_PORT: 9191          #/api
-#   EDC_CONNECTOR_MANAGEMENT_PORT: 9193   #/management
-#   EDC_CONNECTOR_PROTOCOL_PORT: 9194     #/protocol
-#   EDC_CONNECTOR_CONTROL_PORT: 9192      #/control
-#   EDC_CONNECTOR_PUBLIC_PORT: 9291       #/public
-
-#   EDC_BACKEND_PORT: 8080
-
-#   RABBITMQ_PORT: 5672
-#   RABBITMQ_DEFAULT_USER: guest
-#   RABBITMQ_DEFAULT_PASS: guest
-
-#   CERTS_DIR: ./certs
-#   KEY_ALIAS: datacellar
-#   KEY_PASSW: datacellar
-#   CERT_SUBJECT: '/C=FR/ST=Toulouse/L=Labege/O=CEA/OU=CEA/CN={{.PARTICIPANT_NAME}}.{{.DOMAIN_NAME}}'
- 
-#   DID_WEB_DOMAIN: '{{.PARTICIPANT_NAME}}.{{.DOMAIN_NAME}}'
+includes:
+  wallet: 'wallet/taskfile.yml'
+  did-server: 'did-server/taskfile.yml'
+  proxy: 'reverse-proxy/taskfile.yml'
+  credentials-manager: 'credentials-manager/taskfile.yml'
+  connector: 'edc-connector/taskfile.yml'
+  cde: 'cde/taskfile.yml'
   
 
 tasks:
-  stop-all:
+
+  config-all:
     cmds:
-      - task: stop-credentials-manager
+      - task did-server:config
+      - task proxy:config
+      - task wallet:config
 
   start-all:
     cmds:
-      - task: start-credentials-manager
-  
-  config-all:
-    cmds:
-      - task: config-caddyfile
-      - task: config-credentials-manager
-      
-  # caddy - Reverse proxy
-  start-credentials-manager:
-    desc: "Start Credentials Manager"
-    deps:
-      - config-credentials-manager
-    vars: 
-      DIR_PATH: '{{.USER_WORKING_DIR}}/credentials-manager'
-    dir: '{{.DIR_PATH}}'
-    dotenv: ['{{.DIR_PATH}}/.env']
-    preconditions:
-      - test -f docker-compose.yml
-    cmds:
-      - docker compose up --wait
-  
-  
-  
-  # Credentials Manager
-  stop-credentials-manager:
-    desc: "Stop Credentials Manager"
-    vars: 
-      DIR_PATH: '{{.USER_WORKING_DIR}}/credentials-manager'
-    dir: '{{.DIR_PATH}}'
-    dotenv: ['{{.DIR_PATH}}/.env']
-    preconditions:
-      - test -f docker-compose.yml
-    cmds:
-      - docker compose down
-  
-  config-credentials-manager:
-    vars: 
-      DIR_PATH: '{{.USER_WORKING_DIR}}'
-      CREDENTIALS_MANAGER_PATH: '{{.USER_WORKING_DIR}}/credentials-manager'
-    dir: '{{.DIR_PATH}}'
-    dotenv: ['{{.DIR_PATH}}/.env']
-    cmds:
-      - envsubst < {{.CREDENTIALS_MANAGER_PATH}}/.env.tmpl > {{.CREDENTIALS_MANAGER_PATH}}/.env
-      - cd {{.CREDENTIALS_MANAGER_PATH}}/waltid && sudo chmod 755 data && sudo chown -R 1001:1001 data
-      - cd {{.CREDENTIALS_MANAGER_PATH}}/data && sudo chmod -R 755 vc
-      - sudo cp {{.CERT_FOLDER}}/{{.DID_WEB_DOMAIN}}/{{.DID_WEB_DOMAIN}}.crt {{.CREDENTIALS_MANAGER_PATH}}/data/vc/x5u.pem
-      - sudo chown {{.USER}}:{{.USER}} {{.CREDENTIALS_MANAGER_PATH}}/data/vc/x5u.pem
-      - curl -s https://letsencrypt.org/certs/isrgrootx1.pem >> {{.CREDENTIALS_MANAGER_PATH}}/data/vc/x5u.pem
+      - task did-server:start
 
-  # Connector
-  config-connector:
-    vars: 
-        DIR_PATH: '{{.USER_WORKING_DIR}}'
-        CONNECTOR_PATH: '{{.USER_WORKING_DIR}}/edc-connector'
-        CONNECTOR_CONFIG: '{{.CONNECTOR_PATH}}/config'
-    dir: '{{.DIR_PATH}}'
-    dotenv: ['{{.DIR_PATH}}/.env', '{{.CONNECTOR_PATH}}/.env']
-    cmds:
-      - envsubst < {{.CONNECTOR_CONFIG}}/connector.properties.tmpl > {{.CONNECTOR_CONFIG}}/connector.properties
-      - envsubst < {{.CONNECTOR_PATH}}/.env.tmpl > {{.CONNECTOR_PATH}}/.env
-      - task: create-certs
-
-  create-certs:
-    vars: 
-        DIR_PATH: '{{.USER_WORKING_DIR}}'
-        CONNECTOR_PATH: '{{.USER_WORKING_DIR}}/edc-connector'
-        CONNECTOR_CERTS: '{{.CONNECTOR_PATH}}/certs'
-    dir: '{{.CONNECTOR_CERTS}}'
-    dotenv: ['{{.DIR_PATH}}/.env']
-    cmds:
-      - bash -c "OUT_DIR=./ KEY_ALIAS={{.KEY_ALIAS}} KEY_PASSW={{.KEY_PASSW}} SUBJECT={{.CERT_SUBJECT}} ./create-certs.sh"
-  
-  # config-all:
+  # stop-all:
   #   cmds:
-  #     - envsubst < ./{{.CONNECTOR_CONFIG}}/connector.properties.tmpl > ./{{.CONNECTOR_CONFIG}}/connector.properties
-  #     - envsubst < .env.tmpl > .env
-  #     - envsubst < ./caddy/Caddyfile.tmpl > ./caddy/Caddyfile
-    
-  # clear:
-  #   cmds:
-  #     - sudo rm -rf waltid/wallet/data/*
+  #     - task: stop-credentials-manager
 
-  # build-connector:
-  #   desc: Builds the connector
-  #   dir: "{{.CONNECTOR_DIR}}"
-  #   vars:
-  #     CLEAN: '{{default "true" .CLEAN}}'
-  #     SSI: '{{default "false" .SSI}}'
-  #   env:
-  #     # https://docs.gradle.org/current/userguide/build_environment.html#sec:project_properties
-  #     ORG_GRADLE_PROJECT_useSSI: "{{.SSI}}"
-  #   cmds:
-  #     - ./gradlew {{if eq .CLEAN "true"}}clean{{end}} build -PtaskThreads=2 --max-workers=2
-
-  # build-scripts-image:
-  #   desc: Builds the Docker image used to run helper scripts
-  #   dir: scripts
-  #   cmds:
-  #     - docker build -t {{.SCRIPTS_IMAGE}} .
-
-  # create-certs:
+  # # ----------------------------------------------------
+  # # Wallet : based on Waltid wallet
+  # # ----------------------------------------------------
+  # start-wallet:
+  #   desc: "Start Wallet"
   #   deps:
-  #     - build-scripts-image
-  #   requires:
-  #     vars: [CERTS_DIR]
+  #     - config-wallet
   #   cmds:
-  #     - mkdir -p {{.CERTS_DIR}}
-  #     - >
-  #       docker run --rm
-  #       -v {{.CERTS_DIR}}:/out
-  #       {{.SCRIPTS_IMAGE}}
-  #       /bin/bash -c "OUT_DIR=/out KEY_ALIAS={{.KEY_ALIAS}} KEY_PASSW={{.KEY_PASSW}} SUBJECT={{.CERT_SUBJECT}} ./create-certs.sh"
-  #   status:
-  #     - test -f {{.CERTS_DIR}}/*.pfx
-  #     - test -f {{.CERTS_DIR}}/key.pem
-  #     - test -f {{.CERTS_DIR}}/pubkey.pem
-
-  # up-wallet:
-  #   deps:
-  #     - create-certs
-  #   cmds:
-  #     - sudo chown 999:999 waltid/wallet/data
   #     - docker compose up wallet -d --wait
-
-  # up-web-server:
+  
+  # stop-wallet:
+  #   cmds:
+  #       - docker compose stop wallet
+  
+  # config-wallet:
+  #   vars: 
+  #     DIR_PATH: '{{.USER_WORKING_DIR}}'
+  #     WALLET_PATH: '{{.USER_WORKING_DIR}}/wallet/waltid'
+  #   dir: '{{.WALLET_PATH}}'
+  #   cmds:
+  #     - cd {{.WALLET_PATH}} && sudo chmod 755 data && sudo chown -R 1001:1001 data
+  #     # - sudo cp {{.CERT_FOLDER}}/{{.DID_WEB_DOMAIN}}/{{.DID_WEB_DOMAIN}}.crt {{.CREDENTIALS_MANAGER_PATH}}/data/vc/x5u.pem
+  #     # - sudo chown {{.USER}}:{{.USER}} {{.CREDENTIALS_MANAGER_PATH}}/data/vc/x5u.pem
+  #     # - curl -s https://letsencrypt.org/certs/isrgrootx1.pem >> {{.CREDENTIALS_MANAGER_PATH}}/data/vc/x5u.pem  
+  
+  # # ----------------------------------------------------
+  # # Web Server : to publish the VCs  
+  # # ----------------------------------------------------
+  # start-web-server:
+  #   desc: "Start Web Server"
+  #   deps:
+  #     - config-web-server
   #   cmds:
   #     - docker compose up web-server -d --wait
-
-  # provision-wallet:
-  #   deps:
-  #     - up-wallet
+  
+  # stop-web-server:
   #   cmds:
-  #     - docker compose up provision-wallet 
-
-  # up-consumer:
-  #   deps:
-  #     - up-wallet
+  #       - docker compose stop web-server
+  
+  # config-webserver:
+  #   vars: 
+  #     DIR_PATH: '{{.USER_WORKING_DIR}}'
+  #     STORE_PATH: '{{.USER_WORKING_DIR}}/store'
+  #   dir: '{{.STORE_PATH}}'
   #   cmds:
-  #     - sed -i '/^eu\.datacellar\.openapi\.url/ s/^/#/' ./{{.CONNECTOR_CONFIG}}/connector.properties
-  #     - docker compose up -d broker backend --wait
-  #     - docker compose up connector
+  #     - sudo chmod -R 755 vc
+  
+  # # config-certs:
+  # #   vars: 
+  # #     DIR_PATH: '{{.USER_WORKING_DIR}}'
+  # #     CERTS_PATH: '{{.USER_WORKING_DIR}}/store/certs'
+  # #   dir: '{{.DIR_PATH}}'
+  # #   dotenv: ['{{.DIR_PATH}}/.env']
+  # #   cmds:
+  # #     - sudo cp {{.CERTS_PATH}}/{{.DID_WEB_DOMAIN}}/* {{.CREDENTIALS_MANAGER_PATH}}/data/vc/x5u.pem
+  # #     - sudo cp {{.CERTS_PATH}}/{{.DID_WEB_DOMAIN}}/{{.DID_WEB_DOMAIN}}.crt {{.CREDENTIALS_MANAGER_PATH}}/data/vc/x5u.pem
+  # #     - sudo chown {{.USER}}:{{.USER}} {{.CREDENTIALS_MANAGER_PATH}}/data/vc/x5u.pem
+  # #     - curl -s https://letsencrypt.org/certs/isrgrootx1.pem >> {{.CREDENTIALS_MANAGER_PATH}}/data/vc/x5u.pem  
+      
+  # # ----------------------------------------------------
+  # # Credentials Manager
+  # # ----------------------------------------------------
 
-  # up-provider:
+  # start-credentials-manager:
+  #   desc: "Start Credentials Manager"
   #   deps:
-  #     - up-wallet
+  #     - config-credentials-manager
   #   cmds:
-  #     - docker compose up -d mock-http --wait 
-  #     - docker compose up connector
+  #     - task: start-credentials-manager-api
+  #     - task: start-credentials-manager-webui
+  
+  # stop-credentials-manager:
+  #   cmds:
+  #       - task: stop-credentials-manager-api
+  #       - task: stop-credentials-manager-webui
+
+  # config-credentials-manager:
+  #   vars: 
+  #     DIR_PATH: '{{.USER_WORKING_DIR}}'
+  #     CREDENTIALS_MANAGER_PATH: '{{.USER_WORKING_DIR}}/credentials-manager'
+  #   dir: '{{.DIR_PATH}}'
+  #   dotenv: ['{{.DIR_PATH}}/.env']
+  #   cmds:
+  #     - envsubst < {{.CREDENTIALS_MANAGER_PATH}}/.env.tmpl > {{.CREDENTIALS_MANAGER_PATH}}/.env
+  #     - cd {{.CREDENTIALS_MANAGER_PATH}}/waltid && sudo chmod 755 data && sudo chown -R 1001:1001 data
+  #     - cd {{.CREDENTIALS_MANAGER_PATH}}/data && sudo chmod -R 755 vc
+  #     - sudo cp {{.CERT_FOLDER}}/{{.DID_WEB_DOMAIN}}/{{.DID_WEB_DOMAIN}}.crt {{.CREDENTIALS_MANAGER_PATH}}/data/vc/x5u.pem
+  #     - sudo chown {{.USER}}:{{.USER}} {{.CREDENTIALS_MANAGER_PATH}}/data/vc/x5u.pem
+  #     - curl -s https://letsencrypt.org/certs/isrgrootx1.pem >> {{.CREDENTIALS_MANAGER_PATH}}/data/vc/x5u.pem
+
+  # # Credentials Manager API
+  # start-credentials-manager-api:
+  #   desc: "Start Credentials Manager API"
+  #   deps:
+  #     - config-credentials-manager
+  #   vars: 
+  #     DIR_PATH: '{{.USER_WORKING_DIR}}/credentials-manager'
+  #   dir: '{{.DIR_PATH}}'
+  #   dotenv: ['{{.DIR_PATH}}/.env']
+  #   preconditions:
+  #     - test -f docker-compose.yml
+  #   cmds:
+  #     - docker compose up --wait
+    
+  # stop-credentials-manager-api:
+  #   desc: "Stop Credentials Manager"
+  #   vars: 
+  #     DIR_PATH: '{{.USER_WORKING_DIR}}/credentials-manager'
+  #   dir: '{{.DIR_PATH}}'
+  #   dotenv: ['{{.DIR_PATH}}/.env']
+  #   preconditions:
+  #     - test -f docker-compose.yml
+  #   cmds:
+  #     - docker compose down
+  
+
+  # # Credentials Manager Webui
+  # start-credentials-manager-webui:
+  #   desc: "Start Credentials Manager Webui"
+  #   deps:
+  #     - config-credentials-manager
+  #   vars: 
+  #     DIR_PATH: '{{.USER_WORKING_DIR}}/credentials-manager'
+  #   dir: '{{.DIR_PATH}}'
+  #   dotenv: ['{{.DIR_PATH}}/.env']
+  #   preconditions:
+  #     - test -f docker-compose.yml
+  #   cmds:
+  #     - docker compose up --wait
+    
+  # stop-credentials-manager-webui:
+  #   desc: "Stop Credentials Manager Webui"
+  #   vars: 
+  #     DIR_PATH: '{{.USER_WORKING_DIR}}/credentials-manager'
+  #   dir: '{{.DIR_PATH}}'
+  #   dotenv: ['{{.DIR_PATH}}/.env']
+  #   preconditions:
+  #     - test -f docker-compose.yml
+  #   cmds:
+  #     - docker compose down
+
+  
+  
+
+  # # # Connector
+  # # config-connector:
+  # #   vars: 
+  # #       DIR_PATH: '{{.USER_WORKING_DIR}}'
+  # #       CONNECTOR_PATH: '{{.USER_WORKING_DIR}}/edc-connector'
+  # #       CONNECTOR_CONFIG: '{{.CONNECTOR_PATH}}/config'
+  # #   dir: '{{.DIR_PATH}}'
+  # #   dotenv: ['{{.DIR_PATH}}/.env', '{{.CONNECTOR_PATH}}/.env']
+  # #   cmds:
+  # #     - envsubst < {{.CONNECTOR_CONFIG}}/connector.properties.tmpl > {{.CONNECTOR_CONFIG}}/connector.properties
+  # #     - envsubst < {{.CONNECTOR_PATH}}/.env.tmpl > {{.CONNECTOR_PATH}}/.env
+  # #     - task: create-certs
+
+  # # create-certs:
+  # #   vars: 
+  # #       DIR_PATH: '{{.USER_WORKING_DIR}}'
+  # #       CONNECTOR_PATH: '{{.USER_WORKING_DIR}}/edc-connector'
+  # #       CONNECTOR_CERTS: '{{.CONNECTOR_PATH}}/certs'
+  # #   dir: '{{.CONNECTOR_CERTS}}'
+  # #   dotenv: ['{{.DIR_PATH}}/.env']
+  # #   cmds:
+  # #     - bash -c "OUT_DIR=./ KEY_ALIAS={{.KEY_ALIAS}} KEY_PASSW={{.KEY_PASSW}} SUBJECT={{.CERT_SUBJECT}} ./create-certs.sh"
+  
+  # # config-all:
+  # #   cmds:
+  # #     - envsubst < ./{{.CONNECTOR_CONFIG}}/connector.properties.tmpl > ./{{.CONNECTOR_CONFIG}}/connector.properties
+  # #     - envsubst < .env.tmpl > .env
+  # #     - envsubst < ./caddy/Caddyfile.tmpl > ./caddy/Caddyfile
+    
+  # # clear:
+  # #   cmds:
+  # #     - sudo rm -rf waltid/wallet/data/*
+
+  # # build-connector:
+  # #   desc: Builds the connector
+  # #   dir: "{{.CONNECTOR_DIR}}"
+  # #   vars:
+  # #     CLEAN: '{{default "true" .CLEAN}}'
+  # #     SSI: '{{default "false" .SSI}}'
+  # #   env:
+  # #     # https://docs.gradle.org/current/userguide/build_environment.html#sec:project_properties
+  # #     ORG_GRADLE_PROJECT_useSSI: "{{.SSI}}"
+  # #   cmds:
+  # #     - ./gradlew {{if eq .CLEAN "true"}}clean{{end}} build -PtaskThreads=2 --max-workers=2
+
+  # # build-scripts-image:
+  # #   desc: Builds the Docker image used to run helper scripts
+  # #   dir: scripts
+  # #   cmds:
+  # #     - docker build -t {{.SCRIPTS_IMAGE}} .
+
+  # # create-certs:
+  # #   deps:
+  # #     - build-scripts-image
+  # #   requires:
+  # #     vars: [CERTS_DIR]
+  # #   cmds:
+  # #     - mkdir -p {{.CERTS_DIR}}
+  # #     - >
+  # #       docker run --rm
+  # #       -v {{.CERTS_DIR}}:/out
+  # #       {{.SCRIPTS_IMAGE}}
+  # #       /bin/bash -c "OUT_DIR=/out KEY_ALIAS={{.KEY_ALIAS}} KEY_PASSW={{.KEY_PASSW}} SUBJECT={{.CERT_SUBJECT}} ./create-certs.sh"
+  # #   status:
+  # #     - test -f {{.CERTS_DIR}}/*.pfx
+  # #     - test -f {{.CERTS_DIR}}/key.pem
+  # #     - test -f {{.CERTS_DIR}}/pubkey.pem
+
+  # # up-wallet:
+  # #   deps:
+  # #     - create-certs
+  # #   cmds:
+  # #     - sudo chown 999:999 waltid/wallet/data
+  # #     - docker compose up wallet -d --wait
+
+  # # up-web-server:
+  # #   cmds:
+  # #     - docker compose up web-server -d --wait
+
+  # # provision-wallet:
+  # #   deps:
+  # #     - up-wallet
+  # #   cmds:
+  # #     - docker compose up provision-wallet 
+
+  # # up-consumer:
+  # #   deps:
+  # #     - up-wallet
+  # #   cmds:
+  # #     - sed -i '/^eu\.datacellar\.openapi\.url/ s/^/#/' ./{{.CONNECTOR_CONFIG}}/connector.properties
+  # #     - docker compose up -d broker backend --wait
+  # #     - docker compose up connector
+
+  # # up-provider:
+  # #   deps:
+  # #     - up-wallet
+  # #   cmds:
+  # #     - docker compose up -d mock-http --wait 
+  # #     - docker compose up connector
 
