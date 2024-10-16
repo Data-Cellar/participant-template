@@ -23,7 +23,7 @@ tasks:
     desc: "Stop DID Server"
     dir: '{{.DID_SERVER_FOLDER}}'
     cmds:
-        - docker compose stop did-server
+        - docker compose down did-server
   
   config:
     desc: "Config DID Server"

@@ -21,12 +21,12 @@ tasks:
       PARTICIPANT_TEMPLATE : '{{.USER_WORKING_DIR}}/../participant-template/'
       PARTICIPANT_FOLDER: '{{.USER_WORKING_DIR}}/participants/{{.PARTICIPANT_NAME}}'
       EXTERNAL_PROXY_FOLDER: '/home/debian/datacellar/datacellar-mvd/reverse-proxy/caddy'
-      # CERT_FOLDER: '{{.PROXY_FOLDER}}/certs'
+      PROXY_CERT_FOLDER: '{{.EXTERNAL_PROXY_FOLDER}}/certs'
       # SED_CMD: 's/PARTICIPANT_NAME: companyX/PARTICIPANT_NAME: {{.PARTICIPANT_NAME}}/g'
     env:
       PARTICIPANT_NAME: '{{.PARTICIPANT_NAME}}'
       PARTICIPANT_FOLDER: '{{.PARTICIPANT_FOLDER}}'
-      
+      PROXY_CERT_FOLDER: '{{.PROXY_CERT_FOLDER}}'
     cmds:
       - sh -c '[ -d "{{.PARTICIPANT_FOLDER}}" ] && cd {{.PARTICIPANT_FOLDER}} && task stop-all || echo "" ' 
       - sh -c '[ -d "{{.PARTICIPANT_FOLDER}}" ] && sudo rm -R {{.PARTICIPANT_FOLDER}} || echo ""'
@@ -38,6 +38,7 @@ tasks:
       - cp {{.PARTICIPANT_FOLDER}}/reverse-proxy/caddy/conf.d/{{.PARTICIPANT_NAME}}.caddy {{.EXTERNAL_PROXY_FOLDER}}/conf.d/{{.PARTICIPANT_NAME}}.caddy
       - docker compose -f {{.EXTERNAL_PROXY_FOLDER}}/../docker-compose.yml restart caddy
       
+      - cd {{.PARTICIPANT_FOLDER}} && task start-all
       # - sleep 3 #wait until CERTs created by Caddy
       
       # - cd {{.PARTICIPANT_FOLDER}} && task config-credentials-manager

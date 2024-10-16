@@ -24,7 +24,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'
 from gaiax.registry import check_x5u_compliance_gx_trustanchor
 from crypto.utils import extract_jwt_header_payload
 
-_logger = logging.getLogger(__name__)
+from loguru import logger
+_logger = logger
 
 
 OID2ALG = {
@@ -370,9 +371,25 @@ class WalletClass:
         
         try:
             res_credential.raise_for_status()
+            self.rm_vc_file(credentialId= credentialId)
             return _logger.info(f"{credentialId} {output_message[f'{res_credential.status_code}']}")
         except:
             _logger.error(f"{credentialId} {output_message[f'{res_credential.status_code}']}")
+    
+    
+    def rm_vc_file(self, credentialId : str = "", credential_path: str = "/credentials"):
+        # remove vc files 
+        file_path= f"{credential_path}/vc/{credentialId}.json" 
+
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            _logger.info(f"/vc/{credentialId} has been deleted.")
+        
+        # remove vp files
+        file_path=f"{credential_path}/vp/{credentialId}.json"
+        if os.path.exists(file_path):
+            os.remove(file_path)
+            _logger.info(f"/vc/{credentialId} has been deleted.") 
     
     def update_credendial(self, id:str, urn:str):
         database_path = self.database_path
@@ -426,10 +443,7 @@ class WalletClass:
            
             jwt_vc_token = res_use_offer_request_json[0]["document"] 
             signed_vc = self.get_vc_from_jwt(jwt=jwt_vc_token)
-            
-            with open(f"/vc/{urn}.json", "w") as f:
-                f.write(json.dumps( signed_vc, indent=4))
-            
+                       
             return signed_vc 
         except requests.exceptions.HTTPError:
             _logger.error(res_use_offer_request.text)

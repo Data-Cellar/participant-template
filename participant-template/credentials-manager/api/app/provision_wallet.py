@@ -14,6 +14,7 @@ import uvicorn
 import os
 import json
 import logging
+from colorlog import ColoredFormatter
 import coloredlogs
 import pprint
 import requests
@@ -28,9 +29,30 @@ from urllib.parse import quote, urlparse, parse_qs
 
 from libs.waltid.wallet import WalletClass
 
-logging.basicConfig(level=logging.INFO)
-_logger = logging.getLogger(__name__)
+from loguru import logger
+_logger = logger
 
+# # Create a console handler
+# handler = logging.StreamHandler()
+
+# # Create a formatter that adds colors and a structured format
+# formatter = ColoredFormatter(
+#     '%(log_color)s%(asctime)s - %(levelname)s - %(message)s',
+#     datefmt='%Y-%m-%d %H:%M:%S',
+#     log_colors={
+#         'DEBUG': 'cyan',
+#         'INFO': 'green',
+#         'WARNING': 'yellow',
+#         'ERROR': 'red',
+#         'CRITICAL': 'bold_red',
+#     }
+# )
+
+# # Set the formatter on the handler
+# handler.setFormatter(formatter)
+
+# # Add the handler to the logger
+# _logger.addHandler(handler)
 
 
 
@@ -47,40 +69,7 @@ PARTICIPANT_LEGAL_NAME = os.getenv('PARTICIPANT_LEGAL_NAME') or 'CEA'
 PARTICIPANT_VAT_ID = os.getenv('PARTICIPANT_VAT_ID') or "FR43775685019"
 PARTICIPANT_COUNTRY_SUBDIVISION_CODE = os.getenv('PARTICIPANT_COUNTRY_SUBDIVISION_CODE') or "FR-OCC"
 
-#ISSUER_API_BASE_URL = os.getenv('ISSUER_API_BASE_URL') or 'https://idp.datacellar.cosypoc.ovh/api/v1'
-ISSUER_API_BASE_URL = 'https://idp.datacellar.cosypoc.ovh/api/v1'
-CREDENTIALS_MANAGER_API = "http://localhost:8080/api/v1"
-
-
-wallet_kwargs = {
-        "wallet_api_base_url": WALLET_API_BASE_URL,
-        "did_web_domain": DID_WEB_DOMAIN,
-        "email":WALLET_USER_EMAIL, 
-        "password":WALLET_USER_PASSWORD, 
-        "key_path":"/certs"
-    }
-
-participant_wallet = WalletClass(**wallet_kwargs)
-dids = participant_wallet.find_did_by_alias(alias="datacellar")
-if (not len(dids)):
-    participant_did = participant_wallet.create_did_web(alias="datacellar", gx_compliance=True)
-else:
-    participant_did = dids[0]["did"]
-
-did_document = participant_wallet.get_did_document(did=participant_did)
-key_id = did_document["verificationMethod"][0]["publicKeyJwk"]["kid"]
-participant_key_jwk = participant_wallet.export_key_jwk(key_id=key_id, loadPrivateKey = True)
-
-print(participant_did)
-print(did_document)
-exit()
-
-credentials_ids = participant_wallet.get_credentials()
-for d in [item["id"] for item in credentials_ids]:
-    print(f"credentialId={d}")
-    participant_wallet.delete_credential(credentialId=d, permanent=True)
-
-
+CREDENTIALS_MANAGER_API = os.getenv('CREDENTIALS_MANAGER_API') or "http://credentials-api:8080/api/v1"
 
 def get_terms_and_conditions():
     headers = {"Authorization": "Bearer " + participant_wallet.token}
@@ -152,23 +141,49 @@ def vp_issuer_sign(vcs=[], did:str = "", use_legacy_catalogue_signature:bool = F
     return signed_vc 
 
 
+if __name__ == '__main__':
+    wallet_kwargs = {
+            "wallet_api_base_url": WALLET_API_BASE_URL,
+            "did_web_domain": DID_WEB_DOMAIN,
+            "email":WALLET_USER_EMAIL, 
+            "password":WALLET_USER_PASSWORD, 
+            "key_path":"/certs",
+            "force_create": True
+        }
 
-print("get_terms_and_conditions")
-tsandcs  = get_terms_and_conditions()
-print(tsandcs["id"])
+    participant_wallet = WalletClass(**wallet_kwargs)
+    dids = participant_wallet.find_did_by_alias(alias="datacellar")
+    if (not len(dids)):
+        participant_did = participant_wallet.create_did_web(alias="datacellar", gx_compliance=True)
+    else:
+        participant_did = dids[0]["did"]
 
-print("get_legal_registration_number")
-lrn = get_legal_registration_number()
-print(tsandcs["id"])
+    did_document = participant_wallet.get_did_document(did=participant_did)
+    key_id = did_document["verificationMethod"][0]["publicKeyJwk"]["kid"]
+    participant_key_jwk = participant_wallet.export_key_jwk(key_id=key_id, loadPrivateKey = True)
 
-print("get_legal_registration_number")
-lp = get_legal_participant(legalRegistrationNumber = lrn["id"], tsandcs=tsandcs["id"], use_legacy_catalogue_signature=True)
-print(lp["id"])
+    credentials_ids = participant_wallet.get_credentials()
+    for d in [item["id"] for item in credentials_ids]:
+        _logger.info(f"credentialId={d}")
+        participant_wallet.delete_credential(credentialId=d, permanent=True)
+        
 
-print("self_sign_vp")
-vp_lp_ss= vp_self_sign(vcs = [tsandcs, lrn, lp ], did=participant_did, use_legacy_catalogue_signature=True)
-print(vp_lp_ss["id"])
+    _logger.info("get_terms_and_conditions")
+    tsandcs  = get_terms_and_conditions()
+    _logger.info(tsandcs["id"])
 
-print("self_issuer_vp")
-vp_lp_is= vp_issuer_sign(vcs = [tsandcs, lrn, lp ], did=participant_did, use_legacy_catalogue_signature=True)
-print(vp_lp_is["id"])
+    _logger.info("get_legal_registration_number")
+    lrn = get_legal_registration_number()
+    _logger.info(tsandcs["id"])
+
+    _logger.info("get_legal_registration_number")
+    lp = get_legal_participant(legalRegistrationNumber = lrn["id"], tsandcs=tsandcs["id"], use_legacy_catalogue_signature=True)
+    _logger.info(lp["id"])
+
+    _logger.info("self_sign_vp")
+    vp_lp_ss= vp_self_sign(vcs = [tsandcs, lrn, lp ], did=participant_did, use_legacy_catalogue_signature=True)
+    _logger.info(vp_lp_ss["id"])
+
+    _logger.info("self_issuer_vp")
+    vp_lp_is= vp_issuer_sign(vcs = [tsandcs, lrn, lp ], did=participant_did, use_legacy_catalogue_signature=True)
+    _logger.info(vp_lp_is["id"])

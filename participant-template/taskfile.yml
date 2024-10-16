@@ -29,11 +29,55 @@ tasks:
 
   start-all:
     cmds:
+      - task: generate-certs
       - task did-server:start
+      - task wallet:start
+      - task credentials-manager:start-api
+      - task credentials-manager:provision-wallet
 
-  # stop-all:
-  #   cmds:
-  #     - task: stop-credentials-manager
+  stop-all:
+    cmds:
+      - task credentials-manager:stop-api
+      - task wallet:stop
+      - task did-server:stop
+      - task credentials-manager:stop-api
+
+  generate-certs:
+    dir: '{{.CERT_FOLDER}}'
+    postconditions:
+      - test -f {{.DID_WEB_DOMAIN}}.key
+      - test -f {{.DID_WEB_DOMAIN}}.crt
+      - test -f cert.pfx #used by the connector
+      - test -f vault.properties #used by the connector
+    env:
+      USE_LETSENCRYPT: true
+      OUT_DIR: '.'
+    cmds:
+      - |
+        if [ "$USE_LETSENCRYPT" = "true" ]; then
+          task import-certs
+        fi       
+      - bash {{.SCRIPTS_FOLDER}}/prepare-certs.sh
+  
+  import-certs:
+    dir: '{{.CERT_FOLDER}}'
+    vars:
+      PARTICIPANT_X5U: '{{.CREDENTIALS_FOLDER}}/.well-known/x5u.pem'
+    postconditions:
+      - test -f {{.DID_WEB_DOMAIN}}.key
+      - test -f {{.DID_WEB_DOMAIN}}.crt
+    cmds:
+      - sudo cp {{.PROXY_CERT_FOLDER}}/{{.DID_WEB_DOMAIN}}/{{.PARTICIPANT_CERT}} .
+      - sudo cp {{.PROXY_CERT_FOLDER}}/{{.DID_WEB_DOMAIN}}/{{.PARTICIPANT_KEY}} .
+      - sudo chown {{.USER}}:{{.USER}} {{.PARTICIPANT_CERT}}
+      - sudo chown {{.USER}}:{{.USER}} {{.PARTICIPANT_KEY}}
+      - sudo cp {{.PARTICIPANT_CERT}} {{.PARTICIPANT_X5U}}
+      - sudo chown {{.USER}}:{{.USER}} {{.PARTICIPANT_X5U}}
+      - curl -s https://letsencrypt.org/certs/isrgrootx1.pem >> {{.PARTICIPANT_X5U}}
+
+
+
+
 
   # # ----------------------------------------------------
   # # Wallet : based on Waltid wallet

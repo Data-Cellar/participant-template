@@ -1,4 +1,5 @@
 
+import os
 from datetime import datetime, timedelta, timezone
 import base64
 from base64 import urlsafe_b64encode, urlsafe_b64decode
@@ -11,6 +12,9 @@ from jwcrypto.jws import JWK, JWS
 from jwcrypto.common import json_encode
 from pyld import jsonld
 from typing import Dict, List, Tuple, Union, Annotated
+
+# The base URL for the Universal Resolver hosted by DIF
+UNIVERSAL_RESOLVER_URL = os.getenv('UNIVERSAL_RESOLVER_URL') or "https://uniresolver.io/1.0/identifiers/"
 
 
 def timenow(days=0):
@@ -59,21 +63,8 @@ def sign_doc(doc, signature_jwk, issuer_verification_method):
     #  signing_input = encoded_jws_protected_header + b'.' + hashed_signature_payload
     jws_token.add_signature(
         signature_jwk, protected=jws_protected_header, alg=signing_algorithm)
-    
-    # jws_token = jws.JWS(hashed_credential)
-    # jws_token.add_signature(private_key, None,
-    #                         json_encode({"alg": "PS256", "b64": False, "crit": ["b64"]}),
-    #                         json_encode({"kid": private_key.thumbprint()}))
-    
-    print("jws_token F1 before serialization")
-    print(jws_token)
-    
+        
     signed = jws_token.serialize(compact=True)
-    print("jws_token F1 after serialization")
-    print(signed)
-    
-    print("compact_token F1 ")
-    print(compact_token(signed))
     
     doc['proof'] = {
         "type": "JsonWebSignature2020",
@@ -221,8 +212,7 @@ def verify_proof(credential: dict, proof: dict, verification_key: JWK, use_legac
         return False
 
 
-# The base URL for the Universal Resolver hosted by DIF
-UNIVERSAL_RESOLVER_URL = "https://uniresolver.io/1.0/identifiers/"
+
 
 def fetch_did_document(did : str) -> Dict[str,any] :
     url = UNIVERSAL_RESOLVER_URL + did
