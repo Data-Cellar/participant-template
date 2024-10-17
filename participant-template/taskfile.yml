@@ -43,6 +43,7 @@ tasks:
       - task credentials-manager:stop-api
 
   generate-certs:
+    silent: true
     dir: '{{.CERT_FOLDER}}'
     postconditions:
       - test -f {{.DID_WEB_DOMAIN}}.key
@@ -60,6 +61,7 @@ tasks:
       - bash {{.SCRIPTS_FOLDER}}/prepare-certs.sh
   
   import-certs:
+    silent: true
     dir: '{{.CERT_FOLDER}}'
     vars:
       PARTICIPANT_X5U: '{{.CREDENTIALS_FOLDER}}/.well-known/x5u.pem'

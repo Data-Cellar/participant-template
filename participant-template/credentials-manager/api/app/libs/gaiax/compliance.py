@@ -4,7 +4,7 @@ import requests
 import uuid
 from typing import Any, Dict, List, Tuple, Union
 
-_logger = logging.getLogger(__name__)
+from loguru import logger as _logger
 
 
 def gx_compliance(vp: Dict[str,any], vcId: str = "") -> dict :
@@ -16,8 +16,7 @@ def gx_compliance(vp: Dict[str,any], vcId: str = "") -> dict :
     response = requests.post(url, json=vp)
     try:
         response.raise_for_status()
-        signed_cred = response.json()
-           
+        signed_cred = response.json() 
         return signed_cred
 
     except requests.exceptions.HTTPError:

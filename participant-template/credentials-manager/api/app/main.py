@@ -119,6 +119,10 @@ def accept_credential_offer(request: Request, did: str, credential_offer_url = s
     uuid_str = str(uuid.uuid4())
     try:
         signed_vc = user_wallet.accept_credential_offer(did=did , credential_offer_url=credential_offer_url, uuid_str=uuid_str)        
+        
+        if (not signed_vc):
+            raise _logger.warning(f"Error Credentials OfferUrl {e}")
+        
         return signed_vc
     except Exception as e:
         _logger.warning(f"Error Credentials OfferUrl {e}")
@@ -142,6 +146,9 @@ def get_terms_and_conditions(request: Request, did: str):
         credential_offer_url = response.json()["credential_offer_url"] 
         signed_vc = user_wallet.accept_credential_offer(did=did , credential_offer_url=credential_offer_url, uuid_str=uuid_str)        
         
+        if (not signed_vc):
+            raise _logger.warning(f"Error Credentials OfferUrl {e}")
+        
         with open(f"/credentials/vc/{uuid_str}.json", "w") as f:
             f.write(json.dumps( signed_vc, indent=4))
             
@@ -160,12 +167,15 @@ def get_legal_registration_number(request: Request, did: str, vatId: str = "FR43
         "id": f"https://{DID_WEB_DOMAIN}/vc/{uuid_str}.json",
         "vatId": vatId
     }
-    print(data)
+
     try:
         response = requests.post(url, json=data)
         response.raise_for_status()    
         credential_offer_url = response.json()["credential_offer_url"] 
         signed_vc = user_wallet.accept_credential_offer(did=did , credential_offer_url=credential_offer_url, uuid_str=uuid_str) 
+        
+        if (not signed_vc):
+            raise _logger.warning(f"Error Credentials OfferUrl {e}")
         
         with open(f"/credentials/vc/{uuid_str}.json", "w") as f:
             f.write(json.dumps( signed_vc, indent=4))
@@ -209,6 +219,9 @@ def get_legal_participant(request: Request, data: VCLegalParticipant, use_legacy
         credential_offer_url = response.json()["credential_offer_url"] 
         signed_vc = user_wallet.accept_credential_offer(did=data.did , credential_offer_url=credential_offer_url, uuid_str=uuid_str)
         
+        if (not signed_vc):
+            raise _logger.warning(f"Error Credentials OfferUrl {e}")
+        
         with open(f"/credentials/vc/{uuid_str}.json", "w") as f:
             f.write(json.dumps( signed_vc, indent=4))
                     
@@ -234,7 +247,7 @@ def vp_self_sign(request: Request, vp: VPDatacellar, did:str, use_legacy_catalog
     
     uuid_str = str(uuid.uuid4())
     if (not presentation["id"]):
-        presentation["id"] = f"https://{DID_WEB_DOMAIN}/vc/{uuid_str}.json"
+        presentation["id"] = f"https://{DID_WEB_DOMAIN}/vp/{uuid_str}.json"
     
     did_document = user_wallet.get_did_document(did=did)
     key_id = did_document["verificationMethod"][0]["publicKeyJwk"]["kid"]
@@ -289,6 +302,9 @@ def vp_issuer_sign(request: Request, vp: VPDatacellar, did:str, use_legacy_catal
         response.raise_for_status()    
         credential_offer_url = response.json()["credential_offer_url"] 
         signed_vc = user_wallet.accept_credential_offer(did=did , credential_offer_url=credential_offer_url, uuid_str=uuid_str)        
+        if (not signed_vc):
+            raise _logger.warning(f"Error Credentials OfferUrl {e}")
+        
         with open(f"/credentials/vp/{uuid_str}.json", "w") as f:
             f.write(json.dumps( presentation, indent=4))
         return signed_vc

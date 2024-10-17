@@ -4,7 +4,8 @@ import requests
 from jwcrypto import jwk, jws
 from typing import Any, Dict, List, Tuple, Union
 from datetime import datetime, timedelta
-_logger = logging.getLogger(__name__)
+
+from loguru import logger as _logger
 
 #-----------------------------------------------------------
 # Gaia-X Get Registration-number

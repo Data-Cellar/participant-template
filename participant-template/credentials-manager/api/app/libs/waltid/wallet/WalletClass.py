@@ -24,8 +24,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../../'
 from gaiax.registry import check_x5u_compliance_gx_trustanchor
 from crypto.utils import extract_jwt_header_payload
 
-from loguru import logger
-_logger = logger
+from loguru import logger as _logger
 
 
 OID2ALG = {
@@ -177,7 +176,6 @@ class WalletClass:
                 encoding=serialization.Encoding.PEM, format=serialization.PublicFormat.SubjectPublicKeyInfo))
             jwk_content = publickey.export(as_dict=True)
             jwk_content['alg'] = OID2ALG[cert.signature_algorithm_oid.dotted_string]
-            print("public_key", jwk_content)
             private_key=open(key_path, 'r').read()           
             jwk_key = jwk.JWK.from_pem(private_key.encode('UTF-8'))
         
@@ -202,7 +200,7 @@ class WalletClass:
         if not any([item["keyId"]["id"] == key_id for item in keys_list_after]):
             raise RuntimeError("Imported key (kid=%s) not found in the list", key_id)
 
-        _logger.info("Imported key (kid=%s) into wallet: %s", key_id, url_import_key)
+        _logger.info(f"Imported key ({key_id}) into wallet: %s", key_id, url_import_key)
 
         return key_id
 
@@ -255,7 +253,7 @@ class WalletClass:
         if gx_compliance:
            self.update_did_document_to_gx(did=did_web)
         
-        _logger.debug("DID web created {did_web}")
+        _logger.info(f"DID web created {did_web}")
         return did_web
 
     def get_did_document(self, did: str) -> Dict:
@@ -291,7 +289,7 @@ class WalletClass:
             cursor.execute(update_query, (new_did_document, did))
             conn.commit()
             
-            _logger.debug(f"DID Document content for DID '{did}' has been updated successfully.")
+            #_logger.info(f"DID Document content for DID '{did}' has been updated successfully.")
         
         except sqlite3.Error as error:
             _logger.error(f"Error while updating document content: {error}")

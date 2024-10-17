@@ -3,12 +3,11 @@ import logging
 import requests
 from typing import Any, Dict, List, Tuple, Union
 
-_logger = logging.getLogger(__name__)
+from loguru import logger as _logger
 
 def check_x5u_compliance_gx_trustanchor(x5u_uri: str) -> dict :
     url = "https://registry.lab.gaia-x.eu/v1-staging/api/trustAnchor/chain/file"
     data = {"uri": x5u_uri}
-    print(data)
     response = requests.post(url, json=data)
     try:
         response.raise_for_status()

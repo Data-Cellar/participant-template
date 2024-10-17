@@ -8,47 +8,74 @@
 
 version: "3"
 
-env:
-  DOMAIN_NAME: 'datacellar.cosypoc.ovh'
-
-
 tasks:
 
   setup-participant:
-    desc: "Create a Data Cellar Dataspace participant : task setup-participant -- <participant-name>"
-    vars:
-      PARTICIPANT_NAME : '{{.CLI_ARGS}}'
-      PARTICIPANT_TEMPLATE : '{{.USER_WORKING_DIR}}/../participant-template/'
-      PARTICIPANT_FOLDER: '{{.USER_WORKING_DIR}}/participants/{{.PARTICIPANT_NAME}}'
-      EXTERNAL_PROXY_FOLDER: '/home/debian/datacellar/datacellar-mvd/reverse-proxy/caddy'
-      PROXY_CERT_FOLDER: '{{.EXTERNAL_PROXY_FOLDER}}/certs'
-      # SED_CMD: 's/PARTICIPANT_NAME: companyX/PARTICIPANT_NAME: {{.PARTICIPANT_NAME}}/g'
-    env:
-      PARTICIPANT_NAME: '{{.PARTICIPANT_NAME}}'
-      PARTICIPANT_FOLDER: '{{.PARTICIPANT_FOLDER}}'
-      PROXY_CERT_FOLDER: '{{.PROXY_CERT_FOLDER}}'
+    desc: "Create a Data Cellar Dataspace participant"
+    silent: true  
     cmds:
-      - sh -c '[ -d "{{.PARTICIPANT_FOLDER}}" ] && cd {{.PARTICIPANT_FOLDER}} && task stop-all || echo "" ' 
-      - sh -c '[ -d "{{.PARTICIPANT_FOLDER}}" ] && sudo rm -R {{.PARTICIPANT_FOLDER}} || echo ""'
-      - mkdir -p {{.PARTICIPANT_FOLDER}}
-      - cp -R {{.PARTICIPANT_TEMPLATE}}/* {{.PARTICIPANT_FOLDER}}/
-      - envsubst < {{.PARTICIPANT_TEMPLATE}}/.env.tmpl > {{.PARTICIPANT_FOLDER}}/.env
+      - |
+        read -p "Enter Participant Name (consumer): " participant_name
+        participant_name=${participant_name:-consumer}
 
-      - cd {{.PARTICIPANT_FOLDER}} && task config-all
-      - cp {{.PARTICIPANT_FOLDER}}/reverse-proxy/caddy/conf.d/{{.PARTICIPANT_NAME}}.caddy {{.EXTERNAL_PROXY_FOLDER}}/conf.d/{{.PARTICIPANT_NAME}}.caddy
-      - docker compose -f {{.EXTERNAL_PROXY_FOLDER}}/../docker-compose.yml restart caddy
+        read -p "Enter Domain Name (datacellar.cosypoc.ovh): " domain_name
+        domain_name=${domain_name:-datacellar.cosypoc.ovh}
+
+        read -p "Enter Participant Fodler (./participants): " participant_folder
+        participant_folder=${participant_folder:-{{.USER_WORKING_DIR}}/participants}
+
+        read -p "Enter proxy folder (~/datacellar/datacellar-mvd/reverse-proxy/caddy): " proxy_folder
+        proxy_folder=${proxy_folder:-/home/debian/datacellar/datacellar-mvd/reverse-proxy/caddy}
+
+        read -p "Use Let's Encrypt? (true/false) [true]: " use_letsncrypt
+        use_letsncrypt=${use_letsncrypt:-true}
+
+        # Set the environment variables
+        export PARTICIPANT_ROOT_FOLDER="$participant_folder"
+        export PARTICIPANT_NAME="$participant_name"
+        export DOMAIN_NAME="$domain_name"
+        export PROXY_FOLDER="$proxy_folder"
+        export USE_LETSENCRYPT="$use_letsncrypt"
+
+        # Construct paths and other derived variables
+        PARTICIPANT_FOLDER="$PARTICIPANT_ROOT_FOLDER/$PARTICIPANT_NAME"
+        PARTICIPANT_TEMPLATE='{{.USER_WORKING_DIR}}/../participant-template/'
+        EXTERNAL_PROXY_FOLDER="$PROXY_FOLDER"
+        PROXY_CERT_FOLDER="$PROXY_FOLDER/certs"
+
+        # Export the derived variables
+        export PARTICIPANT_FOLDER="$PARTICIPANT_FOLDER"
+        export PARTICIPANT_TEMPLATE=$PARTICIPANT_TEMPLATE
+        export EXTERNAL_PROXY_FOLDER="$EXTERNAL_PROXY_FOLDER"
+        export PROXY_CERT_FOLDER="$PROXY_CERT_FOLDER"
+
+        # Execute the commands using the gathered inputs and derived values
+        echo "--------------------------------------------------------"
+        echo "Setting up Datacellar participant"
+        echo "--------------------------------------------------------"
+        echo "Name" : $PARTICIPANT_NAME
+        echo "Folder": $PARTICIPANT_FOLDER
+        echo "Domain: $DOMAIN_NAME"
+        echo "Proxy folder: $PROXY_FOLDER"
+        echo "Using Let's Encrypt: $USE_LETSENCRYPT"
+
+        sh -c '[ -d "$PARTICIPANT_FOLDER" ] && cd $PARTICIPANT_FOLDER && task stop-all || echo "" ' 
+        sh -c '[ -d "$PARTICIPANT_FOLDER" ] && sudo rm -R $PARTICIPANT_FOLDER || echo ""'
+        mkdir -p $PARTICIPANT_FOLDER
+        cp -R $PARTICIPANT_TEMPLATE/* $PARTICIPANT_FOLDER/
+        envsubst < $PARTICIPANT_TEMPLATE/.env.tmpl > $PARTICIPANT_FOLDER/.env
+
+        cd $PARTICIPANT_FOLDER && task config-all
+        cp $PARTICIPANT_FOLDER/reverse-proxy/caddy/conf.d/$PARTICIPANT_NAME.caddy $EXTERNAL_PROXY_FOLDER/conf.d/$PARTICIPANT_NAME.caddy
+        docker compose -f $EXTERNAL_PROXY_FOLDER/../docker-compose.yml restart caddy
       
-      - cd {{.PARTICIPANT_FOLDER}} && task start-all
-      # - sleep 3 #wait until CERTs created by Caddy
-      
-      # - cd {{.PARTICIPANT_FOLDER}} && task config-credentials-manager
-      # - cd {{.PARTICIPANT_FOLDER}} && task start-all
+        cd $PARTICIPANT_FOLDER && task start-all
 
-      # - sleep 2 #wait until Credential Manager and Wallet starts
-      
-      # - cd {{.PARTICIPANT_FOLDER}} && task config-connector
- 
+        read -p "Do you want to create a legal participant? (yes/no) [no]: " create_legal_participant
+        create_legal_participant=${create_legal_participant:-no}
 
-
-
-
+        if [ "$create_legal_participant" = "yes" ]; then
+          echo "Creating legal participant..."
+          cd $PARTICIPANT_FOLDER && task credentials-manager:create-legalparticipant
+        fi
+  

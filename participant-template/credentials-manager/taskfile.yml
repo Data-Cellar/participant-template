@@ -31,14 +31,42 @@ tasks:
       - docker compose stop credentials-api
   
   provision-wallet:
+    silent: true
     desc: "Provision Wallet"
+    deps:
+      - start-api
     dir: '{{.CREDENTIALS_MANAGER_FOLDER}}'
     preconditions:
       - test -f docker-compose.yml
       - test -f {{.CERT_FOLDER}}/{{.DID_WEB_DOMAIN}}.key
       - test -f {{.CERT_FOLDER}}/{{.DID_WEB_DOMAIN}}.crt
     cmds:
-      - docker compose up provision-wallet --wait
+      - |
+        echo "Provision Wallet"
+        docker exec -it {{.PARTICIPANT_NAME}}.credentials-api \
+          bash -c "python3 provision_wallet.py"
+
+  create-legalparticipant:
+    desc: 'Create a legal participant with provided legalname, vatid, and country_subdivision_code'
+    deps:
+      - start-api
+    silent: true 
+    dir: '{{.CREDENTIALS_MANAGER_FOLDER}}'
+    cmds:
+      - |
+        read -p "Enter legalName (CEA): " legalname
+        legalname=${legalname:-CEA}  # Default to "CEA" if no input is provided
+        read -p "Enter VAT ID (FRFR43775685019): " vatid
+        vatid=${vatid:-FRFR43775685019}  # Default to "FRFR43775685019" if no input
+        read -p "Enter subdivision (FR-OCC): " subdivision
+        subdivision=${subdivision:-FR-OCC}  # Default to "FR-OCC" if no input
+        echo "Creating legal participant: legalName=$legalname, vatID=$vatid, CountrySubdivisionCode=$subdivision"
+        docker exec -it {{.PARTICIPANT_NAME}}.credentials-api \
+          bash -c "\
+          PARTICIPANT_LEGAL_NAME={{.legalname}} \
+          PARTICIPANT_VAT_ID={{.vatid}} \
+          PARTICIPANT_COUNTRY_SUBDIVISION_CODE={{.subdivision}} \
+          python3 create_legal_participant.py"
   
 
   # # config-certs:
