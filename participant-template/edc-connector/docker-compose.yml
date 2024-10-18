@@ -17,8 +17,8 @@ services:
       - datacellar
 
   backend:
-    image: ${EDC_CONNECTOR_IMG}-backend:${EDC_CONNECTOR_IMG_VERSION}
-    container_name: ${PARTICIPANT_NAME}.connector-backend
+    image: ${EDC_CONNECTOR_IMG}:${EDC_CONNECTOR_IMG_VERSION}
+    container_name: ${PARTICIPANT_NAME}.backend
     build: .
     restart: on-failure
     volumes:
@@ -84,6 +84,21 @@ services:
       retries: 3
       start_period: 30s
 
+
+  example:
+    image: ${EDC_CONNECTOR_IMG}:${EDC_CONNECTOR_IMG_VERSION}
+    container_name: ${PARTICIPANT_NAME}.connector-example
+    build: .
+    restart: on-failure
+    volumes:
+      - .:/opt/src
+      - ${CERT_FOLDER}:/opt/src/config/certs
+    environment:
+      COUNTER_PARTY_PROTOCOLE_URL: ${COUNTER_PARTY_PROTOCOLE_URL}
+      COUNTER_PARTY_CONNECTOR_ID: ${COUNTER_PARTY_CONNECTOR_ID}
+    networks:
+      - datacellar
+    entrypoint: sh -c "sleep infinity"
 
 volumes:
   postgres_data: {}
