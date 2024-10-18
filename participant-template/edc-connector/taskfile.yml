@@ -19,16 +19,23 @@ tasks:
     dir: '{{.EDC_CONNECTOR_FOLDER}}'
     cmds: 
       - |
-        read -p "Start connector? (consumer/provider) [consumer]: " connector_type
-        connector_type=${connector_type:-consumer} 
+        read -p "Do you want to start Connector ? (yes/no) [no]: " start_connector
+        start_connector=${start_connector:-no}
 
-        if [ "$connector_type" = "consumer" ]; then
-          task start-consumer
-        elif [ "$connector_type" = "provider" ]; then
-          task start-provider
-        else
-          echo "Invalid connector type. Please enter 'consumer' or 'provider'."
-          task start
+        if [ "$start_connector" = "yes" ]; then
+
+          read -p "Start connector? (consumer/provider) [consumer]: " connector_type
+          connector_type=${connector_type:-consumer} 
+
+          if [ "$connector_type" = "consumer" ]; then
+            task start-consumer
+          elif [ "$connector_type" = "provider" ]; then
+            task start-provider
+          else
+            echo "Invalid connector type. Please enter 'consumer' or 'provider'."
+            task start
+          fi
+
         fi
   
   stop:

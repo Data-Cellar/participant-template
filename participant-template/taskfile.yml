@@ -33,11 +33,11 @@ tasks:
 
   stop-all:
     cmds:
-      - task credentials-manager:stop
+      - task credentials-manager:stop-api
+      - task connector:stop
       - task wallet:stop
       - task did-server:stop
-      - task credentials-manager:stop
-      - task connector:stop
+      
 
   config-all:
     cmds:

@@ -50,19 +50,45 @@ CREDENTIALS_MANAGER_API = "http://localhost:8080/api/v1"
 def get_terms_and_conditions(token: str="", did: str=""):
     headers = {"Authorization": "Bearer " + token}
     url = CREDENTIALS_MANAGER_API+ "/vc/TermsAndConditions"
-    res = requests.post(url, headers=headers, params={"did":did})
-    res.raise_for_status()
-    signed_vc = res.json()
-    return signed_vc
+    try:
+        response = requests.post(url, headers=headers, params={"did":did})
+        response.raise_for_status()
+        signed_vc = response.json()
+        return signed_vc
+    
+    except requests.exceptions.HTTPError as http_err:
+        _logger.error(f"{http_err}")
+        return
+         
+    except requests.exceptions.RequestException as req_err:
+        _logger.error(f"Failed to reach Credentials Manager API: {req_err}")
+        return 
+
+    except Exception as e:
+        _logger.error(f"An error occurred: {e}")
+        return 
 
 def get_legal_registration_number(token: str="", did: str=""):
     headers = {"Authorization": "Bearer " + token}
     url = CREDENTIALS_MANAGER_API+ "/vc/LegalRegistrationNumber"
-    res = requests.post(url, headers=headers, params={"did":did, "vatId": PARTICIPANT_VAT_ID})
-    res.raise_for_status()
-    signed_vc = res.json()
-    return signed_vc
+    try:
+        response = requests.post(url, headers=headers, params={"did":did, "vatId": PARTICIPANT_VAT_ID})
+        response.raise_for_status()
+        signed_vc = response.json()
+        return signed_vc
+    
+    except requests.exceptions.HTTPError as http_err:
+        _logger.error(f"{http_err}")
+        return
+         
+    except requests.exceptions.RequestException as req_err:
+        _logger.error(f"Failed to reach Credentials Manager API: {req_err}")
+        return 
 
+    except Exception as e:
+        _logger.error(f"An error occurred: {e}")
+        return 
+   
 def get_legal_participant(token:str = "", did: str="", legalRegistrationNumber: str="", tsandcs: str="", use_legacy_catalogue_signature:bool = False):
     headers = {"Authorization": "Bearer " + token}
     url = CREDENTIALS_MANAGER_API+ "/vc/LegalParticipant"
@@ -77,10 +103,23 @@ def get_legal_participant(token:str = "", did: str="", legalRegistrationNumber: 
         "use_legacy_catalogue_signature": use_legacy_catalogue_signature
     }
     
-    res = requests.post(url, headers=headers, params=params, json={"did":did})
-    res.raise_for_status()
-    signed_vc = res.json()
-    return signed_vc
+    try:
+        response = requests.post(url, headers=headers, params=params, json={"did":did})
+        response.raise_for_status()
+        signed_vc = response.json()
+        return signed_vc
+    
+    except requests.exceptions.HTTPError as http_err:
+        _logger.error(f"{http_err}")
+        return
+         
+    except requests.exceptions.RequestException as req_err:
+        _logger.error(f"Failed to reach Credentials Manager API: {req_err}")
+        return 
+
+    except Exception as e:
+        _logger.error(f"An error occurred: {e}")
+        return 
 
 def vp_self_sign(token:str = "",vcs=[], did:str = "", use_legacy_catalogue_signature:bool = False):
     headers = {"Authorization": "Bearer " + token}
@@ -93,11 +132,26 @@ def vp_self_sign(token:str = "",vcs=[], did:str = "", use_legacy_catalogue_signa
         "use_legacy_catalogue_signature": use_legacy_catalogue_signature,
         "did": did
     }
-    res = requests.post(url, headers=headers, params=params, json=data)
-    res.raise_for_status()
-    signed_vc = res.json()
-    return signed_vc
     
+    try:
+        response = requests.post(url, headers=headers, params=params, json=data)
+        response.raise_for_status()
+        signed_vc = response.json()
+        return signed_vc
+    
+    except requests.exceptions.HTTPError as http_err:
+        _logger.error(f"{http_err}")
+        return
+         
+    except requests.exceptions.RequestException as req_err:
+        _logger.error(f"Failed to reach Credentials Manager API: {req_err}")
+        return 
+
+    except Exception as e:
+        _logger.error(f"An error occurred: {e}")
+        return 
+
+   
 def vp_issuer_sign(token:str = "", vcs=[], did:str = "", use_legacy_catalogue_signature:bool = False):
     headers = {"Authorization": "Bearer " + token}
     url = CREDENTIALS_MANAGER_API+ "/vp/issuer_sign"
@@ -110,12 +164,24 @@ def vp_issuer_sign(token:str = "", vcs=[], did:str = "", use_legacy_catalogue_si
         "did": did
     }
     
-    res = requests.post(url, headers=headers, params=params, json=data)
-    res.raise_for_status()
-    signed_vc = res.json()
-    return signed_vc 
+    try:
+        response = requests.post(url, headers=headers, params=params, json=data)
+        response.raise_for_status()
+        signed_vc = response.json()
+        return signed_vc
+    
+    except requests.exceptions.HTTPError as http_err:
+        _logger.error(f"{http_err}")
+        return
+         
+    except requests.exceptions.RequestException as req_err:
+        _logger.error(f"Failed to reach Credentials Manager API: {req_err}")
+        return 
 
-
+    except Exception as e:
+        _logger.error(f"An error occurred: {e}")
+        return 
+    
 
 if __name__ == '__main__':
     wallet_kwargs = {
@@ -132,21 +198,37 @@ if __name__ == '__main__':
     _logger.info(f"[Participant DID] -> {did}")
     
     _logger.info("[Issuer Signed VC] -> terms_and_conditions")
+    
     tsandcs  = get_terms_and_conditions(token=wallet_token, did=did)
+    if (not tsandcs):
+        _logger.error("failed to get terms_and_conditions")
+        exit(1) 
     _logger.info(tsandcs["id"])
 
     _logger.info("[Issuer Signed VC] -> legal_registration_number")
     lrn = get_legal_registration_number(token=wallet_token, did=did)
+    if (not lrn):
+        _logger.error("failed to get legal_registration_number")
+        exit(1) 
     _logger.info(tsandcs["id"])
 
     _logger.info("[Issuer Signed VC] -> legal_participant")
     lp = get_legal_participant(token=wallet_token, did=did, legalRegistrationNumber = lrn["id"], tsandcs=tsandcs["id"], use_legacy_catalogue_signature=True)
+    if (not lp):
+        _logger.error("failed to get legal_participant")
+        exit(1) 
     _logger.info(lp["id"])
 
     _logger.info("[Self Signed VP] -> legal_participant")
     vp_lp_ss= vp_self_sign(token=wallet_token, did=did, vcs = [lp],use_legacy_catalogue_signature=True)
+    if (not vp_lp_ss):
+        _logger.error("failed to self signed VP")
+        exit(1) 
     _logger.info(vp_lp_ss["id"])
 
     _logger.info("[Issuer Signed VP] -> Legal_participant")
     vp_lp_is= vp_issuer_sign(token=wallet_token, did=did, vcs = [lp], use_legacy_catalogue_signature=True)
+    if (not vp_lp_is):
+        _logger.error("Issuer failed to sign VP")
+        exit(1) 
     _logger.info(vp_lp_is["id"])

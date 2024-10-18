@@ -21,15 +21,7 @@ tasks:
       - test -f docker-compose.yml
     cmds:
       - docker compose -p {{.PARTICIPANT_NAME}} up credentials-api --wait
-    
-  stop:
-    desc: "Stop Credentials Manager"
-    dir: '{{.CREDENTIALS_MANAGER_FOLDER}}'
-    preconditions:
-      - test docker-compose.yml
-    cmds:
-      - docker compose -p {{.PARTICIPANT_NAME}} down
-  
+     
   stop-api:
     desc: "Stop Credentials Manager"
     dir: '{{.CREDENTIALS_MANAGER_FOLDER}}'
@@ -76,41 +68,3 @@ tasks:
           PARTICIPANT_COUNTRY_SUBDIVISION_CODE={{.subdivision}} \
           python3 create_legal_participant.py"
   
-
-  # # config-certs:
-  # #   vars: 
-  # #     DIR_PATH: '{{.USER_WORKING_DIR}}'
-  # #     CERTS_PATH: '{{.USER_WORKING_DIR}}/store/certs'
-  # #   dir: '{{.DIR_PATH}}'
-  # #   dotenv: ['{{.DIR_PATH}}/.env']
-  # #   cmds:
-  # #     - sudo cp {{.CERTS_PATH}}/{{.DID_WEB_DOMAIN}}/* {{.CREDENTIALS_MANAGER_PATH}}/data/vc/x5u.pem
-  # #     - sudo cp {{.CERTS_PATH}}/{{.DID_WEB_DOMAIN}}/{{.DID_WEB_DOMAIN}}.crt {{.CREDENTIALS_MANAGER_PATH}}/data/vc/x5u.pem
-  # #     - sudo chown {{.USER}}:{{.USER}} {{.CREDENTIALS_MANAGER_PATH}}/data/vc/x5u.pem
-  # #     - curl -s https://letsencrypt.org/certs/isrgrootx1.pem >> {{.CREDENTIALS_MANAGER_PATH}}/data/vc/x5u.pem
-
-
-  # # Credentials Manager Webui
-  # start-webui:
-  #   desc: "Start Credentials Manager Webui"
-  #   deps:
-  #     - config-credentials-manager
-  #   vars: 
-  #     DIR_PATH: '{{.USER_WORKING_DIR}}/credentials-manager'
-  #   dir: '{{.DIR_PATH}}'
-  #   dotenv: ['{{.DIR_PATH}}/.env']
-  #   preconditions:
-  #     - test -f docker-compose.yml
-  #   cmds:
-  #     - docker compose -p {{.PARTICIPANT_NAME}} up --wait
-    
-  # stop-webui:
-  #   desc: "Stop Credentials Manager Webui"
-  #   vars: 
-  #     DIR_PATH: '{{.USER_WORKING_DIR}}/credentials-manager'
-  #   dir: '{{.DIR_PATH}}'
-  #   dotenv: ['{{.DIR_PATH}}/.env']
-  #   preconditions:
-  #     - test -f docker-compose.yml
-  #   cmds:
-  #     - docker compose -p {{.PARTICIPANT_NAME}} down

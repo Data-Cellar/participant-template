@@ -21,6 +21,7 @@ services:
       WALLET_USER_EMAIL: ${WALLET_USER_EMAIL}
       WALLET_USER_PASSWORD: ${WALLET_USER_PASSWORD}
       DID_WEB_DOMAIN: ${DID_WEB_DOMAIN}
+      ISSUER_API_KEY: ${ISSUER_API_KEY}
     networks:
       - datacellar
     entrypoint: sh -c "pm2 start main.py --name api --interpreter python3 && pm2 logs api"

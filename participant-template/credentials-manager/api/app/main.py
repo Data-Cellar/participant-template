@@ -46,13 +46,17 @@ security = HTTPBearer()
 WALLET_API_BASE_URL = os.getenv('WALLET_API_BASE_URL')
 DID_WEB_DOMAIN = os.getenv('DID_WEB_DOMAIN')
 DATACELLAR_API_BASE_URL = os.getenv('DATACELLAR_API_BASE_URL')
-
+ISSUER_API_KEY = os.getenv('ISSUER_API_KEY')
 
 wallet_kwargs = {
     "wallet_api_base_url": WALLET_API_BASE_URL,
     "did_web_domain": DID_WEB_DOMAIN
 }
 
+
+#---------------------------------------------
+# Wallet
+#---------------------------------------------
 
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
@@ -128,6 +132,11 @@ def accept_credential_offer(request: Request, did: str, credential_offer_url = s
         _logger.warning(f"Error Credentials OfferUrl {e}")
 
 
+#---------------------------------------------
+# VC & VP issuing
+#---------------------------------------------
+
+
 @app.post("/vc/TermsAndConditions", dependencies=[Depends(verify_token)], tags=["DataCellar"])
 def get_terms_and_conditions(request: Request, did: str):
     
@@ -140,8 +149,15 @@ def get_terms_and_conditions(request: Request, did: str):
         "id": f"https://{DID_WEB_DOMAIN}/vc/{uuid_str}.json",
         "did": did
     }
+    
+    headers = {"X-API-KEY": ISSUER_API_KEY}
+
+    if not ISSUER_API_KEY:
+        _logger.error("Missing or invalid ISSUER_API_KEY, checks it in env var")
+        raise HTTPException(status_code=500, detail="")
+    
     try:
-        response = requests.post(url, json=data)
+        response = requests.post(url, headers=headers, json=data)
         response.raise_for_status()    
         credential_offer_url = response.json()["credential_offer_url"] 
         signed_vc = user_wallet.accept_credential_offer(did=did , credential_offer_url=credential_offer_url, uuid_str=uuid_str)        
@@ -167,9 +183,15 @@ def get_legal_registration_number(request: Request, did: str, vatId: str = "FR43
         "id": f"https://{DID_WEB_DOMAIN}/vc/{uuid_str}.json",
         "vatId": vatId
     }
+    
+    headers = {"X-API-KEY": ISSUER_API_KEY}
+
+    if not ISSUER_API_KEY:
+        _logger.error("Missing or invalid ISSUER_API_KEY, checks it in env var")
+        raise HTTPException(status_code=500, detail="")
 
     try:
-        response = requests.post(url, json=data)
+        response = requests.post(url, headers=headers, json=data)
         response.raise_for_status()    
         credential_offer_url = response.json()["credential_offer_url"] 
         signed_vc = user_wallet.accept_credential_offer(did=did , credential_offer_url=credential_offer_url, uuid_str=uuid_str) 
@@ -184,6 +206,9 @@ def get_legal_registration_number(request: Request, did: str, vatId: str = "FR43
     except Exception as e:
         _logger.warning(f"Error Credentials OfferUrl {e}")
 
+
+
+
 class VCLegalParticipant(BaseModel): ##models
     did: str = ""
     legalName: str = ""
@@ -197,7 +222,11 @@ def get_legal_participant(request: Request, data: VCLegalParticipant, use_legacy
     user_wallet = WalletClass(**{**wallet_kwargs, "token":wallet_token})
     
     url = f"{DATACELLAR_API_BASE_URL}/issuer/vc/LegalParticipant"
-    headers={"Accept": "application/json"}  
+    
+    headers = {"X-API-KEY": ISSUER_API_KEY}
+    if not ISSUER_API_KEY:
+        _logger.error("Missing or invalid ISSUER_API_KEY, checks it in env var")
+        raise HTTPException(status_code=500, detail="") 
     
     uuid_str = str(uuid.uuid4())
     payload = {
@@ -211,23 +240,49 @@ def get_legal_participant(request: Request, data: VCLegalParticipant, use_legacy
     
     params={
         "use_legacy_catalogue_signature": use_legacy_catalogue_signature
-    }
-    
+    }      
+        
     try:
-        response = requests.post(url, params=params, json=payload)
-        response.raise_for_status()    
-        credential_offer_url = response.json()["credential_offer_url"] 
-        signed_vc = user_wallet.accept_credential_offer(did=data.did , credential_offer_url=credential_offer_url, uuid_str=uuid_str)
-        
-        if (not signed_vc):
-            raise _logger.warning(f"Error Credentials OfferUrl {e}")
-        
+        response = requests.post(url, headers=headers, params=params, json=payload)
+        response.raise_for_status()
+
+        # Extract credential_offer_url from response JSON
+        credential_offer_url = response.json().get("credential_offer_url")
+        if not credential_offer_url:
+            raise ValueError("Missing 'credential_offer_url' in response.")
+
+        # Accept the credential offer with the user wallet
+        signed_vc = user_wallet.accept_credential_offer(did=data.did, credential_offer_url=credential_offer_url, uuid_str=uuid_str)
+
+        if not signed_vc:
+            _logger.warning(f"Error: Could not sign the credential for UUID {uuid_str}.")
+            raise ValueError(f"Failed to sign the credential for UUID {uuid_str}.")
+
+        # Save signed credential to file
         with open(f"/credentials/vc/{uuid_str}.json", "w") as f:
-            f.write(json.dumps( signed_vc, indent=4))
-                    
+            f.write(json.dumps(signed_vc, indent=4))
+
         return signed_vc
+
+    # Handle HTTP and network-related errors
+    except requests.exceptions.RequestException as e:
+        _logger.error(f"HTTP request failed: {e}")
+        raise  # Re-raise the exception after logging
+
+    # Handle JSON decoding errors
+    except json.JSONDecodeError as e:
+        _logger.error(f"Failed to parse JSON response: {e}")
+        raise  # Re-raise after logging
+
+    # Handle any other exception
     except Exception as e:
-        _logger.warning(f"Error Credentials OfferUrl {e}")
+        _logger.error(f"An error occurred: {e}")
+        raise  # Re-raise after logging
+
+
+
+
+
 
 class VPDatacellar(BaseModel): ##models
     id: str = ""
@@ -296,22 +351,58 @@ def vp_issuer_sign(request: Request, vp: VPDatacellar, did:str, use_legacy_catal
         "use_legacy_catalogue_signature": use_legacy_catalogue_signature
     }
     
-    headers = {"X-API-KEY": "0164ca06-e718-49c5-8eb9-46e4a3fe1531"}
+    headers = {"X-API-KEY": ISSUER_API_KEY}
+
+    if not ISSUER_API_KEY:
+        _logger.error("Missing or invalid ISSUER_API_KEY, checks it in env var")
+        raise HTTPException(status_code=500, detail="")
+    
+        
     try:
         response = requests.post(url, headers=headers, params=params, json=presentation)
-        response.raise_for_status()    
-        credential_offer_url = response.json()["credential_offer_url"] 
-        signed_vc = user_wallet.accept_credential_offer(did=did , credential_offer_url=credential_offer_url, uuid_str=uuid_str)        
-        if (not signed_vc):
-            raise _logger.warning(f"Error Credentials OfferUrl {e}")
+        response.raise_for_status()
         
+        # Extract credential_offer_url from response JSON
+        credential_offer_url = response.json().get("credential_offer_url")
+        if not credential_offer_url:
+            raise requests.exceptions.HTTPError(
+                "Missing 'credential_offer_url' in response.", 
+                response=response
+            )
+
+        # Accept the credential offer with the user wallet
+        signed_vc = user_wallet.accept_credential_offer(did=did, credential_offer_url=credential_offer_url, uuid_str=uuid_str)
+
+        if not signed_vc:
+            _logger.warning(f"Error: Could not sign the presentation UUID {uuid_str}.")
+            raise requests.exceptions.HTTPError(
+                f"Failed to sign the credential for UUID {uuid_str}.",
+                response=response
+            )
+
+        # Save signed credential to file
         with open(f"/credentials/vp/{uuid_str}.json", "w") as f:
-            f.write(json.dumps( presentation, indent=4))
+            f.write(json.dumps(signed_vc, indent=4))
+
         return signed_vc
+
+    except requests.exceptions.HTTPError as http_err:
+        # Handle HTTP errors specifically
+        _logger.error(f"HTTP error occurred: {http_err}")
+        raise HTTPException(status_code=response.status_code, detail=f"External API error: {str(http_err)}")
+
+    except requests.exceptions.RequestException as req_err:
+        # Handle network-related errors (timeout, connection issues, etc.)
+        _logger.error(f"Request error occurred: {req_err}")
+        raise HTTPException(status_code=503, detail=f"Failed to reach external API: {str(req_err)}")
+
     except Exception as e:
-        _logger.warning(f"Error VP Issuer Sign  {e}") 
-        raise e
-       
+        # Handle any other unexpected exceptions
+        _logger.error(f"An error occurred: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+    
+    
+      
 
 if __name__ == '__main__':
-    uvicorn.run('main:app', host="0.0.0.0", port=8080, reload=False)
+    uvicorn.run('main:app', host="0.0.0.0", port=8080, reload=True)
