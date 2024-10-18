@@ -17,13 +17,13 @@ tasks:
       - config
     dir: '{{.WALLET_FOLDER}}'
     cmds:
-      - docker compose up wallet -d --wait
+      - docker compose -p {{.PARTICIPANT_NAME}} up wallet -d --wait
   
   stop:
     desc: "Stop Wallet"
     dir: '{{.WALLET_FOLDER}}'
     cmds:
-        - docker compose stop wallet
+        - docker compose -p {{.PARTICIPANT_NAME}} stop wallet
   
   config:
     desc: "Config Wallet"

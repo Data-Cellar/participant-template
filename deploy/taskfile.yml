@@ -15,14 +15,17 @@ tasks:
     silent: true  
     cmds:
       - |
+        export PARTICIPANT_NAME=""
+        export PARTICIPANT_FOLDER=""
+        
         read -p "Enter Participant Name (consumer): " participant_name
         participant_name=${participant_name:-consumer}
 
         read -p "Enter Domain Name (datacellar.cosypoc.ovh): " domain_name
         domain_name=${domain_name:-datacellar.cosypoc.ovh}
 
-        read -p "Enter Participant Fodler (./participants): " participant_folder
-        participant_folder=${participant_folder:-{{.USER_WORKING_DIR}}/participants}
+        read -p "Enter Participant Fodler (./participants): " participant_root_folder
+        participant_root_folder=${participant_root_folder:-{{.USER_WORKING_DIR}}/participants}
 
         read -p "Enter proxy folder (~/datacellar/datacellar-mvd/reverse-proxy/caddy): " proxy_folder
         proxy_folder=${proxy_folder:-/home/debian/datacellar/datacellar-mvd/reverse-proxy/caddy}
@@ -31,7 +34,7 @@ tasks:
         use_letsncrypt=${use_letsncrypt:-true}
 
         # Set the environment variables
-        export PARTICIPANT_ROOT_FOLDER="$participant_folder"
+        export PARTICIPANT_ROOT_FOLDER="$participant_root_folder"
         export PARTICIPANT_NAME="$participant_name"
         export DOMAIN_NAME="$domain_name"
         export PROXY_FOLDER="$proxy_folder"
@@ -71,11 +74,4 @@ tasks:
       
         cd $PARTICIPANT_FOLDER && task start-all
 
-        read -p "Do you want to create a legal participant? (yes/no) [no]: " create_legal_participant
-        create_legal_participant=${create_legal_participant:-no}
-
-        if [ "$create_legal_participant" = "yes" ]; then
-          echo "Creating legal participant..."
-          cd $PARTICIPANT_FOLDER && task credentials-manager:create-legalparticipant
-        fi
   

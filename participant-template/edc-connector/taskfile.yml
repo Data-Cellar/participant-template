@@ -9,25 +9,70 @@
 version: "3"
 
 
-# dotenv: ['../.env'] # uncomment if you want to test tasks localy
+#dotenv: ['../.env'] # uncomment if you want to test tasks localy
 
-tasks:
+tasks: 
+
   start:
-    desc: "Start DID Server"
-    deps:
-      - config
-    dir: '{{.PARTICIPANT_FOLDER}}'
-    cmds:
-      - docker compose up did-server -d --wait
+    desc: "Start Connector"
+    silent: true
+    dir: '{{.EDC_CONNECTOR_FOLDER}}'
+    cmds: 
+      - |
+        read -p "Start connector? (consumer/provider) [consumer]: " connector_type
+        connector_type=${connector_type:-consumer} 
+
+        if [ "$connector_type" = "consumer" ]; then
+          task start-consumer
+        elif [ "$connector_type" = "provider" ]; then
+          task start-provider
+        else
+          echo "Invalid connector type. Please enter 'consumer' or 'provider'."
+          task start
+        fi
   
   stop:
-    desc: "Stop DID Server"
-    dir: '{{.PARTICIPANT_FOLDER}}'
+    desc: "Stop Connector"
+    dir: '{{.EDC_CONNECTOR_FOLDER}}'
     cmds:
-        - docker compose stop did-server
+        - docker compose -p {{.PARTICIPANT_NAME}} down
   
   config:
-    desc: "Config DID Server"
-    dir: '{{.PARTICIPANT_FOLDER}}/{{.STORE_FOLDER}}'
+    desc: "Config Connector"
+    dir: '{{.EDC_CONNECTOR_FOLDER}}'
     cmds:
-      - sudo chmod -R 755 credentials
+        - envsubst < ./config/connector.properties.tmpl > ./config/connector.properties
+
+  start-consumer:
+    desc: "Start Connector Consumer"
+    deps:
+      - config
+    dir: '{{.EDC_CONNECTOR_FOLDER}}'
+    cmds:
+      - sed -i '/^eu\.datacellar\.openapi\.url/ s/^/#/' ./config/connector.properties
+      - docker compose -p {{.PARTICIPANT_NAME}} up -d broker backend --wait
+      - docker compose -p {{.PARTICIPANT_NAME}} up connector
+
+  start-provider:
+    silent: true
+    deps:
+      - config
+    desc: "Start Connector Provider"
+    dir: '{{.EDC_CONNECTOR_FOLDER}}'
+    cmds:
+      - |
+       
+        read -p "Set open-api spec (http://${PARTICIPANT_NAME}.mock-api:9090/openapi.json): " openapi_url
+        openapi_url=${openapi_url:-http://${PARTICIPANT_NAME}.mock-api:9090/openapi.json} 
+
+        
+        if [ "$openapi_url" = "http://${PARTICIPANT_NAME}.mock-api:9090/openapi.json" ]; then
+          echo "Starting mock API..."
+          docker compose -p {{.PARTICIPANT_NAME}} up -d mock-api --wait
+        else
+          echo "Replacing OpenAPI URL in connector.properties..."
+          sed -i 's|eu.datacellar.openapi.url=http://'"${PARTICIPANT_NAME}"'.mock-api:9090/openapi.json|eu.datacellar.openapi.url='"${openapi_url}"'|' ./config/connector.properties
+        fi
+
+        echo "Starting the connector..."
+        docker compose -p {{.PARTICIPANT_NAME}} up connector

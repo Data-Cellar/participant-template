@@ -18,13 +18,13 @@ tasks:
       - config
     dir: '{{.PARTICIPANT_FOLDER}}'
     cmds:
-      - docker compose up did-server -d --wait
+      - docker compose -p {{.PARTICIPANT_NAME}} up did-server -d --wait
   
   stop:
     desc: "Stop DID Server"
     dir: '{{.PARTICIPANT_FOLDER}}'
     cmds:
-        - docker compose stop did-server
+        - docker compose -p {{.PARTICIPANT_NAME}} stop did-server
   
   config:
     desc: "Config DID Server"

@@ -16,19 +16,19 @@ tasks:
     deps:
       - config
     cmds:
-      - docker compose up caddy -d --wait
+      - docker compose -p {{.PARTICIPANT_NAME}} up caddy -d --wait
   
   restart:
     desc: "Restart Reverse Proxy"
     deps:
       - config
     cmds:
-      - docker compose restart caddy
+      - docker compose -p {{.PARTICIPANT_NAME}} restart caddy
 
   stop:
     desc: "Stop Reverse Proxy"
     cmds:
-        - docker compose down caddy
+        - docker compose -p {{.PARTICIPANT_NAME}} down caddy
   
   config:
     dir: '{{.PROXY_FOLDER}}/caddy/conf.d'

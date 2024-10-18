@@ -5,6 +5,9 @@ plugins {
 }
 
 dependencies {
+    implementation(libs.edc.boot)
+    implementation(libs.edc.connector.core)
+    implementation(libs.edc.http)
     implementation(libs.edc.control.plane.api.client)
     implementation(libs.edc.control.plane.api)
     implementation(libs.edc.control.plane.core)
@@ -14,18 +17,23 @@ dependencies {
     implementation(libs.edc.management.api)
     implementation(libs.edc.transfer.data.plane)
     implementation(libs.edc.transfer.pull.http.receiver)
+    implementation(libs.edc.core.spi)
 
     implementation(libs.edc.data.plane.selector.api)
     implementation(libs.edc.data.plane.selector.core)
-    implementation(libs.edc.data.plane.selector.client)
 
-    implementation(libs.edc.data.plane.api)
+    implementation(libs.edc.data.plane.control.api)
+    implementation(libs.edc.data.plane.public.api)
     implementation(libs.edc.data.plane.core)
     implementation(libs.edc.data.plane.http)
+
+    api(libs.edc.data.plane.spi)
+    api(libs.edc.json.ld.spi)
 
     implementation(libs.swaggerParser)
     implementation(libs.slugify)
     implementation(libs.json)
+    implementation(libs.okhttp3.okhttp)
 
     if (
         project.hasProperty("useOauthIdentity") &&
@@ -40,6 +48,19 @@ dependencies {
         api(project(":iam"))
     } else {
         implementation(libs.edc.iam.mock)
+    }
+
+    implementation(libs.postgresql.postgresql)
+    implementation(libs.edc.transaction.datasource.spi)
+    implementation(libs.edc.transaction.local)
+
+    if (
+        project.hasProperty("useSQLStore") &&
+        project.property("useSQLStore").toString().toBoolean()
+    ) {
+        // https://github.com/eclipse-edc/Connector/discussions/3242
+        implementation(libs.edc.sql.control.plane.sql)
+        implementation(libs.edc.sql.pool.apache.commons)
     }
 }
 

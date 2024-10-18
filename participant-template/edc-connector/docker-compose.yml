@@ -2,42 +2,91 @@
 services:
 
   connector:
-    image: datacellar/edc:ctic
+    image: ${EDC_CONNECTOR_IMG}:${EDC_CONNECTOR_IMG_VERSION}
     container_name: ${PARTICIPANT_NAME}.connector
-    build:
-      context: .
-      dockerfile: Dockerfile
-      args:
-        CLEAN: "${CLEAN:-true}"   
-        SSI: "${SSI:-false}"      
+    pull_policy: never
+    restart: on-failure
     environment:
-      ORG_GRADLE_PROJECT_useSSI: "${SSI:-false}"
-    # ports:
-      # - 29191:${EDC_CONNECTOR_API_PORT}
-      # - 29192:${EDC_CONNECTOR_CONTROL_PORT}
-      # - 29193:${EDC_CONNECTOR_MANAGEMENT_PORT}
-      # - 29194:${EDC_CONNECTOR_PROTOCOL_PORT}
-      # - 29291:${EDC_CONNECTOR_PUBLIC_PORT}
+      PROPERTIES_FILE_PATH: /opt/src/config/connector.properties
+      KEYSTORE_PATH: /opt/src/config/certs/cert.pfx
+      KEYSTORE_PASSWORD: datacellar
     volumes:
-      - ./certs:/opt/src/certs
-      - ./config:/opt/src/config
-      - ./connector:/opt/src/connector
-    command:
-      [
-        java,
-        -Dedc.fs.config=/opt/src/config/connector.properties,
-        -Dedc.keystore=/opt/src/certs/cert.pfx,
-        -Dedc.keystore.password=datacellar,
-        -Dedc.vault=/opt/src/certs/vault.properties,
-        -jar,
-        /opt/src/connector/openapi-connector/build/libs/openapi-connector.jar,
-      ]
+      - .:/opt/src
+      - ${CERT_FOLDER}:/opt/src/config/certs
     networks:
       - datacellar
 
+  backend:
+    image: ${EDC_CONNECTOR_IMG}-backend:${EDC_CONNECTOR_IMG_VERSION}
+    container_name: ${PARTICIPANT_NAME}.connector-backend
+    build: .
+    restart: on-failure
+    volumes:
+      - .:/opt/src
+      - ${CERT_FOLDER}:/opt/src/config/certs
+    environment:
+      # The public key of the provider is needed to verify the signature of the JWT
+      EDC_CERT_PATH: /opt/src/config/certs/${PARTICIPANT_CERT}
+      EDC_RABBIT_URL: amqp://${RABBITMQ_DEFAULT_PASS}:${RABBITMQ_DEFAULT_PASS}@${PARTICIPANT_NAME}.connector-broker:5672
+      EDC_HTTP_API_PORT: 28000
+    # ports:
+    #   - 28000:${EDC_HTTP_API_PORT}
+    command: [run-http-backend]
+    depends_on:
+      - broker
+    networks:
+      - datacellar
+
+  broker:
+    image: rabbitmq:3.11-management
+    container_name: ${PARTICIPANT_NAME}.connector-broker
+    restart: on-failure
+    # ports:
+    #   - 5672:5672
+    #   - 15672:15672
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_PASS}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
+    networks:
+      - datacellar
+
+  mock-api:
+    image: ${EDC_CONNECTOR_IMG}-mock-api:${EDC_CONNECTOR_IMG_VERSION}
+    build: ./mock-api
+    container_name: ${PARTICIPANT_NAME}.mock-api
+    pull_policy: never
+    command: ["uvicorn", "http-api:app", "--host", "0.0.0.0", "--port", "9090"]
+    restart: on-failure
+    environment:
+      ENABLE_PRESENTATION_DEFINITION: ${ENABLE_PRESENTATION_DEFINITION:-}
+    # ports:
+    #   - "9090:9090"
+    networks:
+      - datacellar
+    
+  postgres:
+    image: postgres:14
+    container_name: ${PARTICIPANT_NAME}.postgres
+    restart: on-failure
+    # ports:
+    #   - 15432:5432
+    environment:
+      POSTGRES_DB: connector
+      POSTGRES_USER: ${EDC_POSTGRES_USER}
+      POSTGRES_PASSWORD: ${EDC_POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./config/sql-store-schemas/:/docker-entrypoint-initdb.d/
+    healthcheck:
+      test: [CMD-SHELL, pg_isready -U postgres]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
 
-
+volumes:
+  postgres_data: {}
 
 networks:
   datacellar:

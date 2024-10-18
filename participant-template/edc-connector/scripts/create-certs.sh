@@ -9,7 +9,6 @@ set -x
 : "${OUT_DIR:?}"
 : "${KEY_ALIAS:?}"
 : "${KEY_PASSW:?}"
-: "${SUBJECT:?}"
 
 openssl req -x509 \
     -nodes \
@@ -17,7 +16,7 @@ openssl req -x509 \
     -keyout ${OUT_DIR}/key.pem \
     -out ${OUT_DIR}/cert.pem \
     -days 365 \
-    -subj ${SUBJECT}
+    -subj "/C=ES/ST=Asturias/L=Gijon/O=CTIC/OU=CTIC/CN=ctic.es"
 
 openssl pkcs12 -export \
     -in ${OUT_DIR}/cert.pem \
@@ -25,11 +24,6 @@ openssl pkcs12 -export \
     -out ${OUT_DIR}/cert.pfx \
     -name ${KEY_ALIAS} \
     -passout pass:${KEY_PASSW}
-
-openssl x509 -pubkey \
-    -in ${OUT_DIR}/cert.pem \
-    --noout \
-    -out ${OUT_DIR}/pubkey.pem
 
 echo "publickey=$(cat ${OUT_DIR}/cert.pem)" > \
     ${OUT_DIR}/vault.properties.temp

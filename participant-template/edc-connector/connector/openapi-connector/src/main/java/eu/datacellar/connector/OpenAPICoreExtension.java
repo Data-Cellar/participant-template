@@ -1,17 +1,24 @@
 package eu.datacellar.connector;
 
+import static org.eclipse.edc.connector.contract.spi.validation.ContractValidationService.NEGOTIATION_SCOPE;
+import static org.eclipse.edc.connector.contract.spi.validation.ContractValidationService.TRANSFER_SCOPE;
 import static org.eclipse.edc.dataaddress.httpdata.spi.HttpDataAddressSchema.HTTP_DATA_TYPE;
+import static org.eclipse.edc.jsonld.spi.PropertyAndTypeNames.ODRL_USE_ACTION_ATTRIBUTE;
 import static org.eclipse.edc.policy.engine.spi.PolicyEngine.ALL_SCOPES;
 import static org.eclipse.edc.spi.query.Criterion.criterion;
 
 import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Map;
 import java.util.UUID;
 
+import javax.sql.DataSource;
+
+import org.eclipse.edc.connector.contract.spi.negotiation.store.ContractNegotiationStore;
 import org.eclipse.edc.connector.contract.spi.offer.store.ContractDefinitionStore;
 import org.eclipse.edc.connector.contract.spi.types.offer.ContractDefinition;
-import org.eclipse.edc.connector.core.CoreServicesExtension;
 import org.eclipse.edc.connector.dataplane.http.spi.HttpDataAddress;
 import org.eclipse.edc.connector.dataplane.http.spi.HttpRequestParamsProvider;
 import org.eclipse.edc.connector.dataplane.selector.spi.instance.DataPlaneInstance;
@@ -35,8 +42,10 @@ import org.eclipse.edc.spi.monitor.Monitor;
 import org.eclipse.edc.spi.system.ServiceExtension;
 import org.eclipse.edc.spi.system.ServiceExtensionContext;
 import org.eclipse.edc.spi.types.domain.asset.Asset;
+import org.eclipse.edc.transaction.datasource.spi.DataSourceRegistry;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.postgresql.ds.PGSimpleDataSource;
 
 import com.github.slugify.Slugify;
 
@@ -55,11 +64,15 @@ public class OpenAPICoreExtension implements ServiceExtension {
     private static final String WEB_HTTP_CONTROL_PORT = "web.http.control.port";
     private static final int DEFAULT_WEB_HTTP_CONTROL_PORT = 9192;
     private static final String WEB_HTTP_PUBLIC_PORT = "web.http.public.port";
-    private static final String WEB_HTTP_PUBLIC_URL = "web.http.public.url";
     private static final int DEFAULT_WEB_HTTP_PUBLIC_PORT = 9291;
     private static final String DEFAULT_HTTP_SCHEME = "http";
     private static final String PUBLIC_API_URL_KEY = "publicApiUrl";
     private static final String DEFAULT_HOSTNAME = "localhost";
+    private static final String WEB_HTTP_PUBLIC_URL = "web.http.public.url";
+    private static final String DATASOURCE_URL = "edc.datasource.default.url";
+    private static final String DATASOURCE_USER = "edc.datasource.default.user";
+    private static final String DATASOURCE_PASSWORD = "edc.datasource.default.password";
+    private static final String EDC_HOSTNAME = "edc.hostname";
 
     /**
      * The name of the extension.
@@ -98,6 +111,9 @@ public class OpenAPICoreExtension implements ServiceExtension {
     private ContractDefinitionStore contractStore;
 
     @Inject
+    private ContractNegotiationStore contractNegotiationStore;
+
+    @Inject
     private DataPlaneInstanceStore dataPlaneStore;
 
     @Inject
@@ -105,6 +121,9 @@ public class OpenAPICoreExtension implements ServiceExtension {
 
     @Inject
     private PolicyEngine policyEngine;
+
+    @Inject
+    private DataSourceRegistry dataSourceRegistry;
 
     @Override
     public String name() {
@@ -114,11 +133,13 @@ public class OpenAPICoreExtension implements ServiceExtension {
     private DataPlaneInstance buildDataPlaneInstance(ServiceExtensionContext context) {
         Monitor monitor = context.getMonitor();
 
-        String hostname = context.getSetting(CoreServicesExtension.HOSTNAME_SETTING, DEFAULT_HOSTNAME);
+        String hostname = context.getSetting(EDC_HOSTNAME, DEFAULT_HOSTNAME);
         String controlPort = context.getSetting(WEB_HTTP_CONTROL_PORT, String.valueOf(DEFAULT_WEB_HTTP_CONTROL_PORT));
         String publicPort = context.getSetting(WEB_HTTP_PUBLIC_PORT, String.valueOf(DEFAULT_WEB_HTTP_PUBLIC_PORT));
         String scheme = context.getSetting(HTTP_SCHEME, DEFAULT_HTTP_SCHEME);
-        String public_endpoint = context.getSetting(WEB_HTTP_PUBLIC_URL, String.format("%s://%s:%s/public/", scheme, hostname, publicPort));
+
+        String publicEndpoint = context.getSetting(WEB_HTTP_PUBLIC_URL,
+                String.format("%s://%s:%s/public/", scheme, hostname, publicPort));
 
         DataPlaneInstance dataPlaneInstance = DataPlaneInstance.Builder.newInstance()
                 .id(DATA_PLANE_ID)
@@ -126,7 +147,7 @@ public class OpenAPICoreExtension implements ServiceExtension {
                 .allowedSourceType(HTTP_DATA_TYPE)
                 .allowedDestType(HTTP_DATA_TYPE)
                 .allowedDestType(TransferDataPlaneConstants.HTTP_PROXY)
-                .property(PUBLIC_API_URL_KEY, String.valueOf(public_endpoint))
+                .property(PUBLIC_API_URL_KEY, publicEndpoint)
                 .build();
 
         monitor.debug(String.format("Built data plane instance: %s", dataPlaneInstance.getProperties()));
@@ -190,10 +211,6 @@ public class OpenAPICoreExtension implements ServiceExtension {
      * @return The policy definition.
      */
     private PolicyDefinition buildPolicyDefinition(Map<String, Object> presentationDefinition, Monitor monitor) {
-        final Action USE_ACTION = Action.Builder.newInstance().type("USE").build();
-
-        ruleBindingRegistry.bind(USE_ACTION.getType(), ALL_SCOPES);
-
         PolicyDefinition.Builder policyDefBuilder = PolicyDefinition.Builder.newInstance()
                 .id(UUID.randomUUID().toString());
 
@@ -201,22 +218,19 @@ public class OpenAPICoreExtension implements ServiceExtension {
             return policyDefBuilder.policy(Policy.Builder.newInstance().build()).build();
         }
 
-        ruleBindingRegistry.bind(CredentialConstraintFunction.KEY, ALL_SCOPES);
-
-        CredentialConstraintFunction atomConstraintFunction = new CredentialConstraintFunction(monitor);
-
-        policyEngine.registerFunction(ALL_SCOPES, Permission.class,
-                CredentialConstraintFunction.KEY,
-                atomConstraintFunction);
-
         String credentialTypePattern = extractCredentialTypePattern(presentationDefinition);
 
-        var credentialConstraint = AtomicConstraint.Builder.newInstance()
+        AtomicConstraint credentialConstraint = AtomicConstraint.Builder.newInstance()
                 .leftExpression(new LiteralExpression(CredentialConstraintFunction.KEY))
                 .operator(Operator.IN)
-                .rightExpression(new LiteralExpression(credentialTypePattern)).build();
+                .rightExpression(new LiteralExpression(credentialTypePattern))
+                .build();
 
-        var permission = Permission.Builder.newInstance().action(USE_ACTION).constraint(credentialConstraint)
+        Action useAction = Action.Builder.newInstance().type(ODRL_USE_ACTION_ATTRIBUTE).build();
+
+        Permission permission = Permission.Builder.newInstance()
+                .action(useAction)
+                .constraint(credentialConstraint)
                 .build();
 
         return policyDefBuilder
@@ -324,12 +338,84 @@ public class OpenAPICoreExtension implements ServiceExtension {
         return openAPI;
     }
 
+    private void ensureDefaultDataSource(ServiceExtensionContext context) {
+        Monitor monitor = context.getMonitor();
+
+        String pgUrl = context.getSetting(DATASOURCE_URL, null);
+        String pgUser = context.getSetting(DATASOURCE_USER, null);
+        String pgPass = context.getSetting(DATASOURCE_PASSWORD, null);
+
+        if (pgUrl == null || pgUser == null || pgPass == null) {
+            monitor.info("Undefined PostgreSQL connection properties: Skipping data source registration");
+            return;
+        }
+
+        DataSource resolvedSource = dataSourceRegistry.resolve(DataSourceRegistry.DEFAULT_DATASOURCE);
+
+        if (resolvedSource != null) {
+            monitor.info("Data source '%s' is already registered".formatted(DataSourceRegistry.DEFAULT_DATASOURCE));
+            return;
+        }
+
+        URI uri;
+
+        try {
+            uri = new URI(pgUrl.substring(5)); // remove "jdbc:"
+        } catch (URISyntaxException e) {
+            e.printStackTrace();
+            monitor.warning("Invalid PostgreSQL URL: Skipping data source registration");
+            return;
+        }
+
+        String host = uri.getHost();
+        int port = uri.getPort();
+        String dbName = uri.getPath().substring(1);
+
+        PGSimpleDataSource dataSource = new PGSimpleDataSource();
+        dataSource.setServerNames(new String[] { host });
+        dataSource.setPortNumbers(new int[] { port });
+        dataSource.setDatabaseName(dbName);
+        dataSource.setUser(pgUser);
+        dataSource.setPassword(pgPass);
+
+        monitor.info("Manually registering data source '%s' to '%s:%s/%s' with username %s"
+                .formatted(DataSourceRegistry.DEFAULT_DATASOURCE, host, port, dbName, pgUser));
+
+        dataSourceRegistry.register(DataSourceRegistry.DEFAULT_DATASOURCE, dataSource);
+    }
+
+    private void registerPolicyFunctions(ServiceExtensionContext context) {
+        Monitor monitor = context.getMonitor();
+
+        ruleBindingRegistry.bind(ODRL_USE_ACTION_ATTRIBUTE, ALL_SCOPES);
+        ruleBindingRegistry.bind(CredentialConstraintFunction.KEY, NEGOTIATION_SCOPE);
+        ruleBindingRegistry.bind(CredentialConstraintFunction.KEY, TRANSFER_SCOPE);
+
+        CredentialConstraintFunction atomConstraintFunction = new CredentialConstraintFunction(monitor);
+
+        monitor.info("Registering policy function: %s".formatted(CredentialConstraintFunction.KEY));
+
+        policyEngine.registerFunction(
+                ALL_SCOPES,
+                Permission.class,
+                CredentialConstraintFunction.KEY,
+                atomConstraintFunction);
+    }
+
     @Override
     public void initialize(ServiceExtensionContext context) {
         Monitor monitor = context.getMonitor();
 
         DataPlaneInstance dataPlane = buildDataPlaneInstance(context);
         dataPlaneStore.create(dataPlane);
+
+        // ToDo: Review this
+        // Data sources should be registered automatically, but I keep getting this:
+        // "java.lang.NullPointerException: DataSource <name> could not be resolved"
+        // So I'm registering the default data source manually for now.
+        ensureDefaultDataSource(context);
+
+        registerPolicyFunctions(context);
 
         openapiUrl = context.getSetting(OPENAPI_URL, null);
 
@@ -339,28 +425,8 @@ public class OpenAPICoreExtension implements ServiceExtension {
             monitor.warning(String.format("OpenAPI URL (property '%s') is not set", OPENAPI_URL));
         }
 
-        Package pkg = OpenAPICoreExtension.class.getPackage();
-        String pkgVersion = pkg.getImplementationVersion();
-
-        paramsProvider.registerSourceDecorator((request, address, builder) -> {
-            if (pkgVersion != null) {
-                builder.header("X-OpenAPI-Connector-Source-Version", pkgVersion);
-            }
-
-            builder.header("X-OpenAPI-Connector", "source");
-
-            return builder;
-        });
-
-        paramsProvider.registerSinkDecorator((request, address, builder) -> {
-            if (pkgVersion != null) {
-                builder.header("X-OpenAPI-Connector-Sink-Version", pkgVersion);
-            }
-
-            builder.header("X-OpenAPI-Connector", "sink");
-
-            return builder;
-        });
+        paramsProvider
+                .registerSourceDecorator(new ContractDetailsHttpParamsDecorator(monitor, contractNegotiationStore));
 
         monitor.info(String.format("Initialized extension: %s", this.getClass().getName()));
     }

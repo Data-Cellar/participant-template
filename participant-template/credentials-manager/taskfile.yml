@@ -20,15 +20,23 @@ tasks:
     preconditions:
       - test -f docker-compose.yml
     cmds:
-      - docker compose up credentials-api --wait
+      - docker compose -p {{.PARTICIPANT_NAME}} up credentials-api --wait
     
+  stop:
+    desc: "Stop Credentials Manager"
+    dir: '{{.CREDENTIALS_MANAGER_FOLDER}}'
+    preconditions:
+      - test docker-compose.yml
+    cmds:
+      - docker compose -p {{.PARTICIPANT_NAME}} down
+  
   stop-api:
     desc: "Stop Credentials Manager"
     dir: '{{.CREDENTIALS_MANAGER_FOLDER}}'
     preconditions:
       - test docker-compose.yml
     cmds:
-      - docker compose stop credentials-api
+      - docker compose -p {{.PARTICIPANT_NAME}} stop credentials-api
   
   provision-wallet:
     silent: true
@@ -94,7 +102,7 @@ tasks:
   #   preconditions:
   #     - test -f docker-compose.yml
   #   cmds:
-  #     - docker compose up --wait
+  #     - docker compose -p {{.PARTICIPANT_NAME}} up --wait
     
   # stop-webui:
   #   desc: "Stop Credentials Manager Webui"
@@ -105,4 +113,4 @@ tasks:
   #   preconditions:
   #     - test -f docker-compose.yml
   #   cmds:
-  #     - docker compose down
+  #     - docker compose -p {{.PARTICIPANT_NAME}} down
