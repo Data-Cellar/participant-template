@@ -13,7 +13,9 @@
 		}
 	}
 	log {
-	level  error
-}
+		level  error
+	}
 
 }
+
+import conf.d/*.caddy

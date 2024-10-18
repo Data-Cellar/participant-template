@@ -8,6 +8,7 @@ services:
     restart: always
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile
+      - ./caddy/config.d:/etc/caddy/config.d
       - caddy_data:/data  
       - caddy_config:/config
       - ./caddy/certs:/data/caddy/certificates/acme-v02.api.letsencrypt.org-directory

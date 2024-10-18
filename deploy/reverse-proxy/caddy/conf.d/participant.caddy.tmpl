@@ -1,0 +1,108 @@
+#------------------------------------------------------
+# DATACELLAR Dataspace participant ( ${PARTICIPANT_NAME} ) 
+#------------------------------------------------------
+
+${PARTICIPANT_NAME}.${DOMAIN_NAME} {
+	
+	#------------------------------------------------------------------
+	# Section 1 - Wallet (based on waltid)
+	#------------------------------------------------------------------
+
+	# Wallet !! NOTE this endpoint will be removed 
+	handle_path /swagger* {
+		rewrite * /swagger{uri}
+		reverse_proxy ${PARTICIPANT_NAME}.wallet:7001
+	}
+
+	# Wallet !! NOTE this endpoint will be removed 
+	handle_path /wallet-api/* {
+		rewrite * /wallet-api/{uri}
+		reverse_proxy ${PARTICIPANT_NAME}.wallet:7001
+	}
+
+	#------------------------------------------------------------------
+	# Section 2 - DID Server (based on Nginx)
+	#------------------------------------------------------------------
+
+	# DID
+	handle_path /.well-known/* {
+		rewrite * /.well-known{uri}
+		reverse_proxy ${PARTICIPANT_NAME}.did-server
+	}
+
+	# VC
+	handle_path /vc/* {
+		rewrite * /vc{uri}
+		reverse_proxy ${PARTICIPANT_NAME}.did-server
+	}
+
+	# VP
+	handle_path /vp/* {
+		rewrite * /vp{uri}
+		reverse_proxy ${PARTICIPANT_NAME}.did-server
+	}
+	
+
+	#------------------------------------------------------------------
+	# Section 3 - Credentials Manager  
+	#------------------------------------------------------------------
+	
+	# main API
+	handle_path /api/v1* {
+		rewrite * /api/v1{uri}
+		reverse_proxy ${PARTICIPANT_NAME}.credentials-api:8080
+	}
+
+	# Swagger
+	handle_path /docs* {
+		rewrite * /docs
+		reverse_proxy ${PARTICIPANT_NAME}.credentials-api:8080
+	}
+
+	# Web UI
+	handle_path /* {
+		rewrite * {uri}
+		reverse_proxy ${PARTICIPANT_NAME}.credentials-webui:8080
+	}
+
+
+	#------------------------------------------------------------------
+	# Section 3 - EDC CONNECTOR
+	#------------------------------------------------------------------
+
+	handle_path /protocol* {
+		rewrite * /protocol{uri}
+		reverse_proxy ${PARTICIPANT_NAME}.connector:${EDC_CONNECTOR_PROTOCOL_PORT}
+	}
+
+	handle_path /management* {
+		rewrite * /management{uri}
+		reverse_proxy ${PARTICIPANT_NAME}.connector:${EDC_CONNECTOR_MANAGEMENT_PORT}
+	}
+
+	handle_path /control/token* {
+		rewrite * /control/token{uri}
+		reverse_proxy ${PARTICIPANT_NAME}.connector:${EDC_CONNECTOR_CONTROL_PORT}
+	}
+
+	handle_path /public* {
+		rewrite * /public{uri}
+		reverse_proxy ${PARTICIPANT_NAME}.connector:${EDC_CONNECTOR_PUBLIC_PORT}
+	}
+
+	#------------------------------------------------------------------
+	# Section 3 - MOCK HTTP (Datasets API to be exposed via connector)
+	#------------------------------------------------------------------
+
+	handle_path /pull* {
+		rewrite * /pull{uri}
+		reverse_proxy ${PARTICIPANT_NAME}.backend:${EDC_BACKEND_PORT}
+	}
+
+	handle_path /push* {
+		rewrite * /push{uri}
+		reverse_proxy ${PARTICIPANT_NAME}.backend:${EDC_BACKEND_PORT}
+	}
+	
+
+}
