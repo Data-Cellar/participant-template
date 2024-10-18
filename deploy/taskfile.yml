@@ -33,12 +33,35 @@ tasks:
         read -p "Use Let's Encrypt? (true/false) [true]: " use_letsncrypt
         use_letsncrypt=${use_letsncrypt:-true}
 
+        read -p "Set DATACELLAR_IDP_URL (https://idp.datacellar.cosypoc.ovh): " datacellar_idp_url
+        datacellar_idp_url=${datacellar_idp_url:-https://idp.datacellar.cosypoc.ovh}
+
+        read -p "Set ISSUER_API_BASE_URL ($datacellar_idp_url): " issuer_api_url
+        issuer_api_url=${issuer_api_url:-$datacellar_idp_url}
+
+        read -p "Set ISSUER_DID (did:web:idp.datacellar.cosypoc.ovh:wallet-api:registry:01c06d48-6174-4323-a007-bd8af6d5b0c5): " issuer_did
+        issuer_did=${issuer_did:-did:web:idp.datacellar.cosypoc.ovh:wallet-api:registry:01c06d48-6174-4323-a007-bd8af6d5b0c5}
+
+        read -p "Set ISSUER_API_KEY (0164ca06-e718-49c5-8eb9-46e4a3fe1531): " issuer_api_key
+        issuer_api_key=${issuer_api_key:-0164ca06-e718-49c5-8eb9-46e4a3fe1531}
+
+        read -p "Set VERIFIER_API_BASE_URL ($datacellar_idp_url): " verifier_api_url
+        verifier_api_url=${verifier_api_url:-$datacellar_idp_url}
+
         # Set the environment variables
         export PARTICIPANT_ROOT_FOLDER="$participant_root_folder"
         export PARTICIPANT_NAME="$participant_name"
         export DOMAIN_NAME="$domain_name"
         export PROXY_FOLDER="$proxy_folder"
         export USE_LETSENCRYPT="$use_letsncrypt"
+        
+        export DATACELLAR_IDP_URL="$datacellar_idp_url"
+        
+        export ISSUER_API_BASE_URL="$issuer_api_url"
+        export ISSUER_DID="$issuer_did"
+        export ISSUER_API_KEY="$issuer_api_key"
+
+        export VERIFIER_API_BASE_URL="$verifier_api_url"
 
         # Construct paths and other derived variables
         PARTICIPANT_FOLDER="$PARTICIPANT_ROOT_FOLDER/$PARTICIPANT_NAME"
