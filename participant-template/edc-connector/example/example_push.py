@@ -1,3 +1,4 @@
+import os
 import asyncio
 import logging
 import pprint
@@ -9,21 +10,33 @@ from edcpy.edc_api import ConnectorController
 from edcpy.messaging import HttpPullMessage, HttpPushMessage, with_messaging_app
 
 _logger = logging.getLogger(__name__)
+_ENV_COUNTER_PARTY_PROTOCOL_URL = "COUNTER_PARTY_PROTOCOL_URL"
+_ENV_COUNTER_PARTY_CONNECTOR_ID = "COUNTER_PARTY_CONNECTOR_ID"
+_ENV_CONSUMER_BACKEND_BASE_URL = "CONSUMER_BACKEND_BASE_URL"
 
 
 @environ.config(prefix="")
 class AppConfig:
-    counter_party_protocol_url: str = environ.var(
-        default="http://provider.local:9194/protocol"
+    counter_party_protocol_url: str = os.getenv(
+        _ENV_COUNTER_PARTY_PROTOCOL_URL, "http://provider.local:9194/protocol"
     )
-
-    counter_party_connector_id: str = environ.var(default="example-provider")
+    
+    counter_party_connector_id: str = os.getenv(
+        _ENV_COUNTER_PARTY_CONNECTOR_ID, "provider"
+    )
+    
+    consumer_backend_base_url: str = os.getenv(
+        _ENV_CONSUMER_BACKEND_BASE_URL, "http://consumer.connector:28000"
+    )
+    
+    consumer_backend_push_path: str = environ.var(default="/push")
+    consumer_backend_push_method: str = environ.var(default="POST")
+    
     asset_query: str = environ.var(default="GET-consumption")
     queue_timeout_seconds: int = environ.var(default=20, converter=int)
     log_level: str = environ.var(default="DEBUG")
-    consumer_backend_base_url: str = environ.var(default="http://consumer.local:8000")
-    consumer_backend_push_path: str = environ.var(default="/push")
-    consumer_backend_push_method: str = environ.var(default="POST")
+   
+    
 
 
 async def push_handler(message: dict, queue: asyncio.Queue):

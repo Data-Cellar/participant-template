@@ -57,7 +57,7 @@ tasks:
     dir: '{{.EDC_CONNECTOR_FOLDER}}'
     cmds:
       - sed -i '/^eu\.datacellar\.openapi\.url/ s/^/#/' ./config/connector.properties
-      - docker compose -p {{.PARTICIPANT_NAME}} up -d broker backend --wait
+      - docker compose -p {{.PARTICIPANT_NAME}} up -d broker backend example --wait
       - docker compose -p {{.PARTICIPANT_NAME}} up -d connector
 
   start-provider:
@@ -87,9 +87,10 @@ tasks:
 
 
   run-examples:
+    silent: true
     desc: Runs the Consumer Pull/Push example script from the consumer
-    deps:
-      - start-consumer
+    # deps:
+    #   - start-consumer
     dir: '{{.EDC_CONNECTOR_FOLDER}}'
     cmds:
       - |
@@ -97,19 +98,24 @@ tasks:
         read -p "Run examples (pull/push/catalogue) [catalogue]: " consumer_example
         consumer_example=${consumer_example:-catalogue} 
 
-        read -p "Set COUNTER_PARTY_PROTOCOL_URL (https://provider.datacellar.cosypoc.ovh/protocol): " counter_party
-        counter_party=${counter_party:-https://provider.datacellar.cosypoc.ovh/protocol} 
+        read -p "Set counter_party_connector_id (provider): " counter_party_connector_id
+        counter_party_connector_id=${counter_party_connector_id:-provider} 
+
+        read -p "Set COUNTER_PARTY_PROTOCOL_URL (https://$counter_party_connector_id.datacellar.cosypoc.ovh/protocol): " counter_party
+        counter_party=${counter_party:-https://$counter_party_connector_id.datacellar.cosypoc.ovh/protocol} 
 
         export COUNTER_PARTY_PROTOCOL_URL=$counter_party
+        export COUNTER_PARTY_CONNECTOR_ID=$counter_party_connector_id
+        
 
         if [ "$consumer_example" = "pull" ]; then
           docker exec -it {{.PARTICIPANT_NAME}}.connector-example \
-          bash -c "python3 /opt/src/example/example_pull.py"
+          bash -c "COUNTER_PARTY_PROTOCOL_URL=$counter_party COUNTER_PARTY_CONNECTOR_ID=$counter_party_connector_id python3 /opt/src/example/example_pull.py"
         fi
         
         if [ "$consumer_example" = "push" ]; then
           docker exec -it {{.PARTICIPANT_NAME}}.connector-example \
-          bash -c "python3 /opt/src/example/example_push.py"
+          bash -c "COUNTER_PARTY_PROTOCOL_URL=$counter_party COUNTER_PARTY_CONNECTOR_ID=$counter_party_connector_id python3 /opt/src/example/example_push.py"
         fi
 
         if [ "$consumer_example" = "catalogue" ]; then

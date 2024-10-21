@@ -1,3 +1,4 @@
+import os
 import asyncio
 import logging
 import pprint
@@ -11,14 +12,20 @@ from edcpy.messaging import HttpPullMessage, with_messaging_app
 
 _logger = logging.getLogger(__name__)
 
+_ENV_LOG_LEVEL = "LOG_LEVEL"
+_ENV_COUNTER_PARTY_PROTOCOL_URL = "COUNTER_PARTY_PROTOCOL_URL"
+_ENV_COUNTER_PARTY_CONNECTOR_ID = "COUNTER_PARTY_CONNECTOR_ID"
 
 @environ.config(prefix="")
 class AppConfig:
-    counter_party_protocol_url: str = environ.var(
-        default="http://provider.local:9194/protocol"
+    counter_party_protocol_url: str = os.getenv(
+        _ENV_COUNTER_PARTY_PROTOCOL_URL, "http://provider.local:9194/protocol"
+    )
+    
+    counter_party_connector_id: str = os.getenv(
+        _ENV_COUNTER_PARTY_CONNECTOR_ID, "provider"
     )
 
-    counter_party_connector_id: str = environ.var(default="example-provider")
     asset_query_get: str = environ.var(default="GET-consumption")
     asset_query_post: str = environ.var(default="POST-consumption-prediction")
     queue_timeout_seconds: int = environ.var(default=20, converter=int)
