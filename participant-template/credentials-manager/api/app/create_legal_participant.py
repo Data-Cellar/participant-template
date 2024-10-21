@@ -90,6 +90,7 @@ def get_legal_registration_number(token: str="", did: str=""):
         return 
    
 def get_legal_participant(token:str = "", did: str="", legalRegistrationNumber: str="", tsandcs: str="", use_legacy_catalogue_signature:bool = False):
+    
     headers = {"Authorization": "Bearer " + token}
     url = CREDENTIALS_MANAGER_API+ "/vc/LegalParticipant"
     data={
@@ -104,7 +105,7 @@ def get_legal_participant(token:str = "", did: str="", legalRegistrationNumber: 
     }
     
     try:
-        response = requests.post(url, headers=headers, params=params, json={"did":did})
+        response = requests.post(url, headers=headers, params=params, json=data)
         response.raise_for_status()
         signed_vc = response.json()
         return signed_vc

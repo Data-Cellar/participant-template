@@ -56,15 +56,15 @@ tasks:
       - |
         read -p "Enter legalName (CEA): " legalname
         legalname=${legalname:-CEA}  # Default to "CEA" if no input is provided
-        read -p "Enter VAT ID (FRFR43775685019): " vatid
-        vatid=${vatid:-FRFR43775685019}  # Default to "FRFR43775685019" if no input
+        read -p "Enter VAT ID (FR43775685019): " vatid
+        vatid=${vatid:-FR43775685019}  # Default to "FR43775685019" if no input
         read -p "Enter subdivision (FR-OCC): " subdivision
         subdivision=${subdivision:-FR-OCC}  # Default to "FR-OCC" if no input
         echo "Creating legal participant: legalName=$legalname, vatID=$vatid, CountrySubdivisionCode=$subdivision"
         docker exec -it {{.PARTICIPANT_NAME}}.credentials-api \
           bash -c "\
-          PARTICIPANT_LEGAL_NAME={{.legalname}} \
-          PARTICIPANT_VAT_ID={{.vatid}} \
-          PARTICIPANT_COUNTRY_SUBDIVISION_CODE={{.subdivision}} \
+          PARTICIPANT_LEGAL_NAME=$legalname \
+          PARTICIPANT_VAT_ID=$vatid \
+          PARTICIPANT_COUNTRY_SUBDIVISION_CODE=$subdivision \
           python3 create_legal_participant.py"
   

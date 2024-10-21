@@ -9,7 +9,7 @@
 version: "3"
 
 
-dotenv: ['../.env'] # uncomment if you want to test tasks localy
+#dotenv: ['../.env'] # uncomment if you want to test tasks localy
 
 tasks: 
 
