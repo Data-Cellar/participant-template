@@ -262,7 +262,6 @@ def verify_credential(verifiable_credential: Dict[str, any], use_legacy_catalogu
         except Exception as e:
             raise Exception(f"verificationMethod failed: {e}")
              
-        
         verification_key = JWK(**publicKeyJwk)       
 
         return verify_proof(credential=verifiable_credential, proof=proof, verification_key=verification_key,  use_legacy_catalogue_signature=use_legacy_catalogue_signature)

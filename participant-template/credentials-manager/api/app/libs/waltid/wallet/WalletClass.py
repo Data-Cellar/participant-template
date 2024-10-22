@@ -446,7 +446,29 @@ class WalletClass:
         except requests.exceptions.HTTPError:
             _logger.error(res_use_offer_request.text)
             raise
+    
+    def match_credentials(self, presentation_definition: dict[str, any]) -> []:
+        url_use_match_credentials = self.wallet_api_base_url + f"/wallet-api/wallet/{self.wallet_id}/exchange/matchCredentialsForPresentationDefinition"
+        headers = { "Authorization": "Bearer " + self.token }
         
+        _logger.info(presentation_definition)
+        
+        response = requests.post(
+            url_use_match_credentials,
+            headers=headers,
+            json=presentation_definition,
+        )
+                
+        try:
+            response.raise_for_status()
+            vcs = response.json()
+            _logger.info(vcs)               
+            return vcs 
+        except requests.exceptions.HTTPError:
+            _logger.error(response.text)
+            raise
+    
+    
     def get_vc_from_jwt(self, jwt : dict[str, any]):
         try:  
             header, payload = extract_jwt_header_payload(jwt)

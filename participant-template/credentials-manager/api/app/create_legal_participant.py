@@ -6,8 +6,9 @@
 #\         \ \ \_\ \/\ \L\.\_\ \ \_/\ \L\.\_      \ \ \L\ \/\  __/ \_\ \_ \_\ \_/\ \L\.\_\ \ \/       |
 #\          \ \____/\ \__/.\_\\ \__\ \__/.\_\      \ \____/\ \____\/\____\/\____\ \__/.\_\\ \_\       |
 #\           \/___/  \/__/\/_/ \/__/\/__/\/_/       \/___/  \/____/\/____/\/____/\/__/\/_/ \/_/       |
-#\                                                                                                    |                                           
-#\            credentilas.manager                                                                        |
+#\                                                                                                    |
+#\            Create Legal Participant Script                                                         |
+#\            Radhouene AZZABI <radhouene.azzabi@cea.fr                                               |
 #\____________________________________________________________________________________________________|
 
 import uvicorn
@@ -184,6 +185,70 @@ def vp_issuer_sign(token:str = "", vcs=[], did:str = "", use_legacy_catalogue_si
         return 
     
 
+
+def match_credentials(token:str = ""):
+    headers = {"Authorization": "Bearer " + token}
+    url = CREDENTIALS_MANAGER_API+ "/credentials/matchCredentialsForPresentationDefinition"
+    
+    data = {
+            "input_descriptors": [
+            {
+                "id": "DataCellarCredential",
+                "format": {
+                    "jwt_vc_json": {
+                    "alg": [
+                        "PS256"
+                    ]
+                    }
+                },
+                "constraints": {
+                    "fields": [
+                        {
+                            "path": ["$.type"],
+                            "filter": {
+                                "pattern": "^DataCellarCredential$",
+                                "type": "string"
+                            }                       
+                        },
+                        {
+                            "path": ["$.issuer"],
+                            "filter": {
+                                "type": "string",
+                                "pattern": "did:web:idp.datacellar.cosypoc.ovh:wallet-api:registry:01c06d48-6174-4323-a007-bd8af6d5b0c5"
+                            }
+                        },
+                        {
+                            "path": ["$.expirationDate"],
+                            "filter": {
+                                "type": "string",
+                                "pattern" : "\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z"
+                            }
+                        }
+                    ]
+                }
+                }
+            ]
+        }
+    try:
+        response = requests.post(url, headers=headers, json=data)
+        response.raise_for_status()
+        vcs = response.json()
+        return vcs
+    
+    except requests.exceptions.HTTPError as http_err:
+        _logger.error(f"{http_err}")
+        return
+         
+    except requests.exceptions.RequestException as req_err:
+        _logger.error(f"Failed to reach Credentials Manager API: {req_err}")
+        return 
+
+    except Exception as e:
+        _logger.error(f"An error occurred: {e}")
+        return 
+    
+
+
 if __name__ == '__main__':
     wallet_kwargs = {
             "wallet_api_base_url": WALLET_API_BASE_URL,
@@ -198,8 +263,16 @@ if __name__ == '__main__':
     did = dids[0]["did"]
     _logger.info(f"[Participant DID] -> {did}")
     
-    _logger.info("[Issuer Signed VC] -> terms_and_conditions")
     
+    vcs = match_credentials(token=wallet_token)
+    if (not vcs):
+        _logger.error("failed match_credentials")
+        exit(1) 
+    _logger.info(vcs)
+    
+    exit()
+    
+    _logger.info("[Issuer Signed VC] -> terms_and_conditions")
     tsandcs  = get_terms_and_conditions(token=wallet_token, did=did)
     if (not tsandcs):
         _logger.error("failed to get terms_and_conditions")

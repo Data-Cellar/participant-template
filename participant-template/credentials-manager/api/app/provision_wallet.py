@@ -6,8 +6,9 @@
 #\         \ \ \_\ \/\ \L\.\_\ \ \_/\ \L\.\_      \ \ \L\ \/\  __/ \_\ \_ \_\ \_/\ \L\.\_\ \ \/       |
 #\          \ \____/\ \__/.\_\\ \__\ \__/.\_\      \ \____/\ \____\/\____\/\____\ \__/.\_\\ \_\       |
 #\           \/___/  \/__/\/_/ \/__/\/__/\/_/       \/___/  \/____/\/____/\/____/\/__/\/_/ \/_/       |
-#\                                                                                                    |                                           
-#\            credentilas.manager                                                                        |
+#\                                                                                                    |
+#\            Provision Wallet0 Script                                                                |
+#\            Radhouene AZZABI <radhouene.azzabi@cea.fr                                               |
 #\____________________________________________________________________________________________________|
 
 import uvicorn
@@ -31,6 +32,7 @@ from libs.waltid.wallet import WalletClass
 
 from loguru import logger
 _logger = logger
+
 
 #---------------------------------------
 # Provision Wallet For Admin 
