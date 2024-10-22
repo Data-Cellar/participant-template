@@ -4,6 +4,7 @@ services:
   connector:
     image: ${EDC_CONNECTOR_IMG}:${EDC_CONNECTOR_IMG_VERSION}
     container_name: ${PARTICIPANT_NAME}.connector
+    build: .
     pull_policy: never
     restart: on-failure
     environment:
@@ -103,8 +104,8 @@ services:
       EDC_CONNECTOR_PROTOCOL_PORT: ${EDC_CONNECTOR_PROTOCOL_PORT}
       EDC_RABBIT_URL: amqp://${RABBITMQ_DEFAULT_PASS}:${RABBITMQ_DEFAULT_PASS}@${PARTICIPANT_NAME}.connector-broker:5672
       CONSUMER_BACKEND_BASE_URL: "${PARTICIPANT_NAME}.backend:28000"
-      COUNTER_PARTY_PROTOCOLE_URL: ${COUNTER_PARTY_PROTOCOLE_URL}
-      COUNTER_PARTY_CONNECTOR_ID: ${COUNTER_PARTY_CONNECTOR_ID}
+      COUNTER_PARTY_PROTOCOLE_URL: ${COUNTER_PARTY_PROTOCOLE_URL:-https://provider.datacellar.cosypoc.ovh}
+      COUNTER_PARTY_CONNECTOR_ID: ${COUNTER_PARTY_CONNECTOR_ID:-provider}
     networks:
       - datacellar
     entrypoint: sh -c "sleep infinity"

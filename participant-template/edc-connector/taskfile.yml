@@ -8,7 +8,6 @@
 
 version: "3"
 
-
 #dotenv: ['../.env'] # uncomment if you want to test tasks localy
 
 tasks: 
@@ -58,7 +57,7 @@ tasks:
     cmds:
       - sed -i '/^eu\.datacellar\.openapi\.url/ s/^/#/' ./config/connector.properties
       - docker compose -p {{.PARTICIPANT_NAME}} up -d broker backend example --wait
-      - docker compose -p {{.PARTICIPANT_NAME}} up -d connector
+      - docker compose -p {{.PARTICIPANT_NAME}} up connector
 
   start-provider:
     silent: true
