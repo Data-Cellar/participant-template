@@ -227,7 +227,7 @@ public class WaltIDIdentityServices {
 
         monitor.info("Exporting key with ID: %s".formatted(keyId));
 
-        String baseUrl = walletUrl + "/wallet-api/wallet/" + walletId + "/keys/export/" + keyId;
+        String baseUrl = walletUrl + "/wallet-api/wallet/" + walletId + "/keys/" + keyId + "/export";
         HttpUrl.Builder urlBuilder = HttpUrl.parse(baseUrl).newBuilder();
         urlBuilder.addQueryParameter("format", "JWK");
         urlBuilder.addQueryParameter("loadPrivateKey", "true");
@@ -432,7 +432,7 @@ public class WaltIDIdentityServices {
                                     put("filter", new HashMap<String, Object>() {
                                         {
                                             put("type", "string");
-                                            put("format", "date-time");
+                                            put("pattern", "\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z");
                                         }
                                     });
                                 }
