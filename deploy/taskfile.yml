@@ -94,7 +94,5 @@ tasks:
         cd $PARTICIPANT_FOLDER && task config-all
         cp $PARTICIPANT_FOLDER/reverse-proxy/caddy/conf.d/$PARTICIPANT_NAME.caddy $EXTERNAL_PROXY_FOLDER/conf.d/$PARTICIPANT_NAME.caddy
         docker compose -f $EXTERNAL_PROXY_FOLDER/../docker-compose.yml restart caddy
-      
-        cd $PARTICIPANT_FOLDER && task start-all
 
   
