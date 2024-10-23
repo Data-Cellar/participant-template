@@ -526,6 +526,51 @@ def verify_credential_signature(request: Request, vc: Optional[Dict[str, Any]] =
     raise HTTPException(status_code=500, detail='Unknown error occurred.')
 
 
+@app.post("/catalogue/participant/register", dependencies=[Depends(verify_token)], tags=["DataCellar"])
+def register_participant_to_catalogue(request: Request, vp: Optional[Dict[str, Any]] = None, url: Optional[str] = Query(None)):
+    wallet_token = get_wallet_token(request)
+    user_wallet = WalletClass(**{**wallet_kwargs, "token":wallet_token})
+    
+    print("register_participant_to_catalogue", url)    
+    headers = {"X-API-KEY": ISSUER_API_KEY}
+
+    if not ISSUER_API_KEY:
+        _logger.error("Missing or invalid ISSUER_API_KEY, checks it in env var")
+        raise HTTPException(status_code=500, detail="")
+    
+    
+    if vp is None and url is None:
+        _logger.error({"status": "error", "message": "Missing 'vp' and 'url' parameters."})
+        raise HTTPException(status_code=400, detail="Missing 'vp' and 'url' parameters.")
+    
+    presentation = vp.copy() if vp else fetch_verifiable_credential(url)
+    payload = {
+        "url" : url
+    }
+    
+    url_catalogue_register_participant = f"{DATACELLAR_API_BASE_URL}/catalogue/participant/register"    
+    try:
+        response = requests.post(url_catalogue_register_participant, headers=headers, params=payload)
+        response.raise_for_status()
+        response_json = response.json()
+
+        return response_json
+
+    except requests.exceptions.HTTPError as http_err:
+        # Handle HTTP errors specifically
+        _logger.error(f"HTTP error occurred: {http_err}")
+        raise HTTPException(status_code=response.status_code, detail=f"External API error: {str(http_err)}")
+
+    except requests.exceptions.RequestException as req_err:
+        # Handle network-related errors (timeout, connection issues, etc.)
+        _logger.error(f"Request error occurred: {req_err}")
+        raise HTTPException(status_code=503, detail=f"Failed to reach external API: {str(req_err)}")
+
+    except Exception as e:
+        # Handle any other unexpected exceptions
+        _logger.error(f"An error occurred: {e}")
+        raise HTTPException(status_code=500, detail=f"Internal Server Error: {str(e)}")
+
       
 
 if __name__ == '__main__':

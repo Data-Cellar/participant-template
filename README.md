@@ -35,29 +35,30 @@ The `deploy` directory contains the script used to create a participant. It uses
 
 ```yaml
 task: Available tasks for this project:
-    * create-legalparticipant:                           Create Legal Participant
-    * cde:config:                                        Configure DID Server
-    * cde:start:                                         Start DID Server
-    * cde:stop:                                          Stop DID Server
-    * connector:config:                                  Configure Connector
-    * connector:run-examples:                            Run Consumer Pull/Push example
-    * connector:start:                                   Start Connector
-    * connector:start-consumer:                          Start Consumer Connector
-    * connector:start-provider:                          Start Provider Connector
-    * connector:stop:                                    Stop Connector
-    * credentials-manager:create-legalparticipant:       Create a legal participant with legalname, vatid, and country_subdivision_code
-    * credentials-manager:provision-wallet:              Provision Wallet
-    * credentials-manager:start-api:                     Start Credentials Manager API
-    * credentials-manager:stop-api:                      Stop Credentials Manager API
-    * did-server:config:                                 Configure DID Server
-    * did-server:start:                                  Start DID Server
-    * did-server:stop:                                   Stop DID Server
-    * proxy:restart:                                     Restart Reverse Proxy
-    * proxy:start:                                       Start Reverse Proxy
-    * proxy:stop:                                        Stop Reverse Proxy
-    * wallet:config:                                     Configure Wallet
-    * wallet:start:                                      Start Wallet
-    * wallet:stop:                                       Stop Wallet
+   * create-legalparticipant:                                       Create Legal Participant
+   * cde:config:                                                    Config DID Server
+   * cde:start:                                                     Start DID Server
+   * cde:stop:                                                      Stop DID Server
+   * connector:config:                                              Config Connector
+   * connector:run-examples:                                        Runs the Consumer Pull/Push example script from the consumer
+   * connector:start:                                               Start Connector
+   * connector:start-consumer:                                      Start Connector Consumer
+   * connector:start-provider:                                      Start Connector Provider
+   * connector:stop:                                                Stop Connector
+   * credentials-manager:create-legalparticipant:                   Create a legal participant with provided legalname, vatid, and country_subdivision_code
+   * credentials-manager:provision-wallet:                          Provision Wallet
+   * credentials-manager:register-legalparticipant-catalogue:       Register a legal participant to the global catalogue
+   * credentials-manager:start-api:                                 Start Credentials Manager API
+   * credentials-manager:stop-api:                                  Stop Credentials Manager
+   * did-server:config:                                             Config DID Server
+   * did-server:start:                                              Start DID Server
+   * did-server:stop:                                               Stop DID Server
+   * proxy:restart:                                                 Restart Reverse Proxy
+   * proxy:start:                                                   Start Reverse Proxy
+   * proxy:stop:                                                    Stop Reverse Proxy
+   * wallet:config:                                                 Config Wallet
+   * wallet:start:                                                  Start Wallet
+   * wallet:stop:                                                   Stop Wallet
 ```
 
 ## Deploy a New Participant
@@ -344,7 +345,34 @@ AppConfig(cert_path='/opt/src/config/certs/consumer.datacellar.cosypoc.ovh.crt',
 |                       | POST     | `/vp/issuer_sign`                                       | VP Issuer Sign                                  |
 | **Verifier**          | POST     | `/verify/proof`                                         | Verify Credential Signature                     |
 
+### Register a Legal Participant in the Global Catalogue
+To register a legal participant in the global catalogue, run the following task:
 
+```console
+$ task credentials-manager:register-legalparticipant-catalogue
+```
+
+You will be prompted to enter the ID of the Legal Participant's VP, which was generated in step 4 of the participant deployment process (URL).
+
+> **Note**: The catalogue registration request is sent to the Datacellar IDP, which handles the registration in the catalogue. This process was designed this way for legal and authorization reasons. The Datacellar administrator must approve the registration of a new participant in the catalogue.
+> This feature has been implemented but is not fully connected to the global catalogue, as it is not currently deployed.     
+
+<details>
+<summary> show logs</summary>
+
+```console
+debian@vps-79d2c53f:~/datacellar/dc-participant/deploy/participants/consumer$ task credentials-manager:register-legalparticipant-catalogue
+task: [credentials-manager:start-api] docker compose -p consumer up credentials-api --wait
+[+] Running 1/1
+ ✔ Container consumer.credentials-api  Healthy                                                                                                                                   0.0s 
+VP Legal Participant (url or id): https://consumer.datacellar.cosypoc.ovh/vp/bc6ca012-e5bd-46a2-99a0-76edfef0c105.json
+2024-10-23 15:01:18.957 | INFO     | __main__:<module>:83 - [Participant DID] -> did:web:consumer.datacellar.cosypoc.ovh:wallet-api:registry:7051ea41-28e2-4fdb-bbf7-ad2c65aa29d9
+2024-10-23 15:01:18.957 | INFO     | __main__:<module>:85 - [Global Catalogue] -> register legal participant
+2024-10-23 15:01:18.957 | INFO     | __main__:<module>:86 - [LEGAL_PARTICIPANT_ID] -> https://consumer.datacellar.cosypoc.ovh/vp/bc6ca012-e5bd-46a2-99a0-76edfef0c105.json
+2024-10-23 15:01:22.268 | INFO     | __main__:<module>:91 - {'status': 'success', 'message': 'All credentials verified successfully', 'details': 'registration legalParticipant into the catalogue is under-construction'}
+debian@vps-79d2c53f:~/datacellar/dc-participant/deploy/participants/consumer$ 
+```
+</details>
 
 ## License
 This project is licensed under the terms outlined in the [LICENSE](LICENSE) file.

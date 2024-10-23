@@ -55,7 +55,7 @@ tasks:
     cmds:
       - |
         read -p "Enter legalName (CEA): " legalname
-        legalname=${legalname:-CEA}  # Default to "CEA" if no input is provided
+        legalname=${legalname:-CEA}  
         read -p "Enter VAT ID (FR43775685019): " vatid
         vatid=${vatid:-FR43775685019}  # Default to "FR43775685019" if no input
         read -p "Enter subdivision (FR-OCC): " subdivision
@@ -67,4 +67,20 @@ tasks:
           PARTICIPANT_VAT_ID=$vatid \
           PARTICIPANT_COUNTRY_SUBDIVISION_CODE=$subdivision \
           python3 create_legal_participant.py"
+
+  register-legalparticipant-catalogue:
+    desc: 'Register a legal participant to the global catalogue'
+    deps:
+      - start-api
+    silent: true 
+    dir: '{{.CREDENTIALS_MANAGER_FOLDER}}'
+    cmds:
+      - |
+        read -p "VP Legal Participant (url or id): " legalparticipant_id
+        legalparticipant_id=${legalparticipant_id:-}  
+        
+        docker exec -it {{.PARTICIPANT_NAME}}.credentials-api \
+          bash -c "\
+          LEGAL_PARTICIPANT_ID=$legalparticipant_id \
+          python3 register_participant_to_catalogue.py"
   
