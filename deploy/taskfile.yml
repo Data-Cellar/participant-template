@@ -27,8 +27,8 @@ tasks:
         read -p "Enter Participant Fodler (./participants): " participant_root_folder
         participant_root_folder=${participant_root_folder:-{{.USER_WORKING_DIR}}/participants}
 
-        read -p "Enter proxy folder (~/datacellar/datacellar-mvd/reverse-proxy/caddy): " proxy_folder
-        proxy_folder=${proxy_folder:-/home/debian/datacellar/datacellar-mvd/reverse-proxy/caddy}
+        read -p "Enter proxy folder (./reverse-proxy/caddy): " proxy_folder
+        proxy_folder=${proxy_folder:-./reverse-proxy/caddy}
 
         read -p "Use Let's Encrypt? (true/false) [true]: " use_letsncrypt
         use_letsncrypt=${use_letsncrypt:-true}
