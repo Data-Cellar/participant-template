@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
 
-# This Bash script generates a self-signed SSL/TLS certificate and converts it into a PKCS12 format. 
-# The script uses OpenSSL to create the certificate and private key files, saving them in the specified ${OUT_DIR} directory. 
-
 set -e
 set -x
 

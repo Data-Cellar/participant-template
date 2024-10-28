@@ -8,11 +8,12 @@ services:
       - ./caddy/conf.d:/etc/caddy/conf.d
       - caddy_data:/data
       - caddy_config:/config
-      - ./caddy/certs:/data/caddy/certificates/acme-v02.api.letsencrypt.org-directory
+      - ./caddy/certs:/data/caddy/certificates/${CADDY_CERTS_DIR}
     cap_add:
       - NET_ADMIN
     environment:
       CADDY_DEBUG: 1
+      CADDY_ACME_CA: ${CADDY_ACME_CA:-https://acme-v02.api.letsencrypt.org/directory}
     ports:
       - 80:80
       - 443:443

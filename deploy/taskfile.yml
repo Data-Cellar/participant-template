@@ -9,9 +9,21 @@
 
 version: "3"
 
+vars:
+  ACME_CA_PROD: "https://acme-v02.api.letsencrypt.org/directory"
+  ACME_CA_STAGING: "https://acme-staging-v02.api.letsencrypt.org/directory"
+  ACME_CERTS_DIR_PROD: "acme-v02.api.letsencrypt.org-directory"
+  ACME_CERTS_DIR_STAGING: "acme-staging-v02.api.letsencrypt.org-directory"
+
 tasks:
   start-proxy:
     desc: "Start the reverse proxy"
+    vars:
+      CADDY_ACME_CA: "{{not .USE_STAGING | ternary .ACME_CA_PROD .ACME_CA_STAGING}}"
+      CADDY_CERTS_DIR: "{{not .USE_STAGING | ternary .ACME_CERTS_DIR_PROD .ACME_CERTS_DIR_STAGING}}"
+    env:
+      CADDY_ACME_CA: "{{.CADDY_ACME_CA}}"
+      CADDY_CERTS_DIR: "{{.CADDY_CERTS_DIR}}"
     cmds:
       - docker compose -f ./reverse-proxy/docker-compose.yml up -d --wait
 
