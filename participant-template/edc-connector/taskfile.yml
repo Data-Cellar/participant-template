@@ -1,5 +1,17 @@
 version: "3"
 
+vars:
+  EXAMPLES_IMAGE: datacellar-connector-examples
+  COUNTER_PARTY_PROTOCOL_URL: "https://{{.PARTICIPANT_NAME}}.{{.DOMAIN_NAME}}/protocol"
+  EDC_CONNECTOR_SCHEME: "http"
+  EDC_CONNECTOR_HOST: "{{.PARTICIPANT_NAME}}.{{.DOMAIN_NAME}}"
+  EDC_CONNECTOR_CONNECTOR_ID: "{{.PARTICIPANT_NAME}}"
+  EDC_CONNECTOR_PARTICIPANT_ID: "{{.PARTICIPANT_NAME}}"
+  EDC_CONNECTOR_MANAGEMENT_PORT: 80
+  EDC_CONNECTOR_CONTROL_PORT: 80
+  EDC_CONNECTOR_PUBLIC_PORT: 80
+  EDC_CONNECTOR_PROTOCOL_PORT: 80
+
 tasks:
   config:
     desc: "Replace the environment variables in the connector properties file template"
@@ -22,3 +34,31 @@ tasks:
     desc: "Stop the connector stack"
     cmds:
       - docker compose -f {{.TASKFILE_DIR}}/docker-compose.yml down
+
+  build-example-image:
+    desc: "Build the container image to run the connector examples"
+    dir: "{{.TASKFILE_DIR}}/examples"
+    cmds:
+      - >
+        docker build
+        --build-arg EDC_CONNECTOR_SCHEME={{.EDC_CONNECTOR_SCHEME}}
+        --build-arg EDC_CONNECTOR_HOST={{.EDC_CONNECTOR_HOST}}
+        --build-arg EDC_CONNECTOR_CONNECTOR_ID={{.EDC_CONNECTOR_CONNECTOR_ID}}
+        --build-arg EDC_CONNECTOR_PARTICIPANT_ID={{.EDC_CONNECTOR_PARTICIPANT_ID}}
+        --build-arg EDC_CONNECTOR_MANAGEMENT_PORT={{.EDC_CONNECTOR_MANAGEMENT_PORT}}
+        --build-arg EDC_CONNECTOR_CONTROL_PORT={{.EDC_CONNECTOR_CONTROL_PORT}}
+        --build-arg EDC_CONNECTOR_PUBLIC_PORT={{.EDC_CONNECTOR_PUBLIC_PORT}}
+        --build-arg EDC_CONNECTOR_PROTOCOL_PORT={{.EDC_CONNECTOR_PROTOCOL_PORT}}
+        -t {{.EXAMPLES_IMAGE}} .
+
+  test-catalogue:
+    desc: "Run an example that connects to the local connector to fetch its catalogue"
+    deps:
+      - build-example-image
+    cmds:
+      - >
+        docker run
+        --rm --network host
+        -e COUNTER_PARTY_PROTOCOL_URL={{.COUNTER_PARTY_PROTOCOL_URL}}
+        {{.EXAMPLES_IMAGE}}
+        python3 /opt/examples/catalogue.py
