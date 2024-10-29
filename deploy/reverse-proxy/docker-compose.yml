@@ -26,11 +26,5 @@ volumes:
 
 networks:
   datacellar:
-    driver: bridge
+    external: true
     name: datacellar_network
-    ipam:
-      config:
-        - subnet: 192.168.0.0/24
-          gateway: 192.168.0.1
-    driver_opts:
-      com.docker.network.bridge.name: br_datacellar

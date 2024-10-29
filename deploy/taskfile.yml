@@ -14,21 +14,41 @@ vars:
   ACME_CA_STAGING: "https://acme-staging-v02.api.letsencrypt.org/directory"
   ACME_CERTS_DIR_PROD: "acme-v02.api.letsencrypt.org-directory"
   ACME_CERTS_DIR_STAGING: "acme-staging-v02.api.letsencrypt.org-directory"
+  DATACELLAR_NETWORK_NAME: "datacellar_network"
+  DATACELLAR_NETWORK_SUBNET: "192.168.0.0/24"
+  DATACELLAR_NETWORK_GATEWAY: "192.168.0.1"
+  DATACELLAR_NETWORK_BRIDGE_NAME: "br_datacellar"
+  CADDY_ACME_CA: "{{not .USE_STAGING | ternary .ACME_CA_PROD .ACME_CA_STAGING}}"
+  CADDY_CERTS_DIR: "{{not .USE_STAGING | ternary .ACME_CERTS_DIR_PROD .ACME_CERTS_DIR_STAGING}}"
+
+env:
+  CADDY_ACME_CA: "{{.CADDY_ACME_CA}}"
+  CADDY_CERTS_DIR: "{{.CADDY_CERTS_DIR}}"
 
 tasks:
-  start-proxy:
-    desc: "Start the reverse proxy"
-    vars:
-      CADDY_ACME_CA: "{{not .USE_STAGING | ternary .ACME_CA_PROD .ACME_CA_STAGING}}"
-      CADDY_CERTS_DIR: "{{not .USE_STAGING | ternary .ACME_CERTS_DIR_PROD .ACME_CERTS_DIR_STAGING}}"
-    env:
-      CADDY_ACME_CA: "{{.CADDY_ACME_CA}}"
-      CADDY_CERTS_DIR: "{{.CADDY_CERTS_DIR}}"
+  create-network:
+    desc: "Create the Data Cellar Docker network"
     cmds:
-      - docker compose -f ./reverse-proxy/docker-compose.yml up -d --wait
+      - >
+        docker network create --driver bridge
+        --subnet {{.DATACELLAR_NETWORK_SUBNET}}
+        --gateway {{.DATACELLAR_NETWORK_GATEWAY}}
+        --opt "com.docker.network.bridge.name={{.DATACELLAR_NETWORK_BRIDGE_NAME}}"
+        {{.DATACELLAR_NETWORK_NAME}}
+    status:
+      - docker network inspect {{.DATACELLAR_NETWORK_NAME}} >/dev/null 2>&1
+
+  start-proxy:
+    deps:
+      - create-network
+    desc: "Start the reverse proxy that will serve the Data Cellar services"
+    cmds:
+      - docker compose -f {{.TASKFILE_DIR}}/reverse-proxy/docker-compose.yml up -d --wait
 
   setup-participant:
-    desc: "Create a Data Cellar Dataspace participant"
+    deps:
+      - create-network
+    desc: "Initialize the services and configuration code to deploy a Data Cellar data space participant"
     silent: true
     env:
       USER_WORKING_DIR: "{{.USER_WORKING_DIR}}"
