@@ -1,6 +1,7 @@
 {
 	key_type rsa2048
 	acme_ca {$CADDY_ACME_CA}
+	auto_https disable_redirects
 
 	cert_issuer acme {
 		preferred_chains {
@@ -9,7 +10,7 @@
 	}
 
 	log {
-		level INFO
+		level debug
 	}
 }
 

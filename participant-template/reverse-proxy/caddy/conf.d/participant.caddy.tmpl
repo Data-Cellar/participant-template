@@ -2,25 +2,22 @@
 # DATACELLAR Dataspace participant ( ${PARTICIPANT_NAME} ) 
 #------------------------------------------------------
 
-${PARTICIPANT_NAME}.${DOMAIN_NAME} {
+http://${PARTICIPANT_NAME}.${DOMAIN_NAME}, ${PARTICIPANT_NAME}.${DOMAIN_NAME} {
 	#------------------------------------------------------------------
-	# Section 1 - Wallet (based on waltid)
+	# Wallet endpoints (based on walt.id)
+	# Note that these endpoints will be removed in the future
 	#------------------------------------------------------------------
 
-	# Wallet !! NOTE this endpoint will be removed 
-	handle_path /swagger* {
-		rewrite * /swagger{uri}
+	handle /swagger* {
 		reverse_proxy ${PARTICIPANT_NAME}.wallet:7001
 	}
 
-	# Wallet !! NOTE this endpoint will be removed 
-	handle_path /wallet-api/* {
-		rewrite * /wallet-api/{uri}
+	handle /wallet-api/* {
 		reverse_proxy ${PARTICIPANT_NAME}.wallet:7001
 	}
 
 	#------------------------------------------------------------------
-	# Section 2 - DID Server (based on Nginx)
+	# DID Server (based on Nginx)
 	#------------------------------------------------------------------
 
 	# DID
@@ -42,7 +39,7 @@ ${PARTICIPANT_NAME}.${DOMAIN_NAME} {
 	}
 
 	#------------------------------------------------------------------
-	# Section 3 - Credentials Manager  
+	# Credentials Manager endpoints
 	#------------------------------------------------------------------
 
 	# main API
@@ -64,40 +61,34 @@ ${PARTICIPANT_NAME}.${DOMAIN_NAME} {
 	}
 
 	#------------------------------------------------------------------
-	# Section 4 - EDC CONNECTOR
+	# EDC connector endpoints
 	#------------------------------------------------------------------
 
-	handle_path /protocol* {
-		rewrite * /protocol{uri}
+	handle /protocol/* {
 		reverse_proxy ${PARTICIPANT_NAME}.connector:${EDC_CONNECTOR_PROTOCOL_PORT}
 	}
 
-	handle_path /management* {
-		rewrite * /management{uri}
+	handle /management/* {
 		reverse_proxy ${PARTICIPANT_NAME}.connector:${EDC_CONNECTOR_MANAGEMENT_PORT}
 	}
 
-	handle_path /control/token* {
-		rewrite * /control/token{uri}
+	handle /control/* {
 		reverse_proxy ${PARTICIPANT_NAME}.connector:${EDC_CONNECTOR_CONTROL_PORT}
 	}
 
-	handle_path /public* {
-		rewrite * /public{uri}
+	handle /public/* {
 		reverse_proxy ${PARTICIPANT_NAME}.connector:${EDC_CONNECTOR_PUBLIC_PORT}
 	}
 
 	#------------------------------------------------------------------
-	# Section 5 - Endpoints exposed by the connector backend
+	# Endpoints exposed by the connector backend
 	#------------------------------------------------------------------
 
-	handle_path /pull* {
-		rewrite * /pull{uri}
+	handle /pull* {
 		reverse_proxy ${PARTICIPANT_NAME}.connector-backend:${EDC_BACKEND_PORT}
 	}
 
-	handle_path /push* {
-		rewrite * /push{uri}
+	handle /push* {
 		reverse_proxy ${PARTICIPANT_NAME}.connector-backend:${EDC_BACKEND_PORT}
 	}
 }
