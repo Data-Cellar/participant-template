@@ -3,7 +3,6 @@
 #------------------------------------------------------
 
 ${PARTICIPANT_NAME}.${DOMAIN_NAME} {
-	
 	#------------------------------------------------------------------
 	# Section 1 - Wallet (based on waltid)
 	#------------------------------------------------------------------
@@ -41,12 +40,11 @@ ${PARTICIPANT_NAME}.${DOMAIN_NAME} {
 		rewrite * /vp{uri}
 		reverse_proxy ${PARTICIPANT_NAME}.did-server
 	}
-	
 
 	#------------------------------------------------------------------
 	# Section 3 - Credentials Manager  
 	#------------------------------------------------------------------
-	
+
 	# main API
 	handle_path /api/v1* {
 		rewrite * /api/v1{uri}
@@ -65,9 +63,8 @@ ${PARTICIPANT_NAME}.${DOMAIN_NAME} {
 		reverse_proxy ${PARTICIPANT_NAME}.credentials-webui:8080
 	}
 
-
 	#------------------------------------------------------------------
-	# Section 3 - EDC CONNECTOR
+	# Section 4 - EDC CONNECTOR
 	#------------------------------------------------------------------
 
 	handle_path /protocol* {
@@ -91,18 +88,16 @@ ${PARTICIPANT_NAME}.${DOMAIN_NAME} {
 	}
 
 	#------------------------------------------------------------------
-	# Section 3 - MOCK HTTP (Datasets API to be exposed via connector)
+	# Section 5 - Endpoints exposed by the connector backend
 	#------------------------------------------------------------------
 
 	handle_path /pull* {
 		rewrite * /pull{uri}
-		reverse_proxy ${PARTICIPANT_NAME}.backend:${EDC_BACKEND_PORT}
+		reverse_proxy ${PARTICIPANT_NAME}.connector-backend:${EDC_BACKEND_PORT}
 	}
 
 	handle_path /push* {
 		rewrite * /push{uri}
-		reverse_proxy ${PARTICIPANT_NAME}.backend:${EDC_BACKEND_PORT}
+		reverse_proxy ${PARTICIPANT_NAME}.connector-backend:${EDC_BACKEND_PORT}
 	}
-	
-
 }
