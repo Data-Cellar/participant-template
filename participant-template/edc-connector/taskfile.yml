@@ -65,6 +65,8 @@ tasks:
 
   test-catalogue-remote:
     desc: "Run an example that connects to a remote connector to fetch its catalogue"
+    deps:
+      - build-example-image
     requires:
       vars:
         - REMOTE_PROTOCOL_URL
