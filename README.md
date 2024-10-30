@@ -2,6 +2,7 @@
 
 - [Data Cellar Participant Template](#data-cellar-participant-template)
   - [Prerequisites](#prerequisites)
+    - [❗ About the Network Configuration](#-about-the-network-configuration)
   - [Project Structure](#project-structure)
   - [User Guide](#user-guide)
     - [Start the Proxy and Initialize a Participant](#start-the-proxy-and-initialize-a-participant)
@@ -33,6 +34,27 @@ To deploy a participant, you need to have the following prerequisites:
 
 > [!TIP]
 > There are scripts for your convenience in the `install` directory to help you install these prerequisites. In any case, it is recommended that you follow the official documentation for these tools.
+
+### ❗ About the Network Configuration
+
+The Data Cellar connector exposes multiple HTTP APIs; some intended to be exposed publicly, while others are meant to be secured and for internal use only.
+
+Currently, as a temporary solution, the Caddy proxy rejects requests from non-local IP addresses that are directed to the **Management** and **Control** APIs. This behavior is suboptimal and will be improved in a future release.
+
+As a result, and for the time being, you need to ensure that local requests to your participant's DNS name (e.g., `consumer.datacellar.cosypoc.ovh`) appear to the proxy as coming from the local network. One simple way to achieve this is by updating your `/etc/hosts` file to include the following line:
+
+```
+<private-ip-participant-services> <participant-name>.<domain-name>
+```
+
+For example:
+
+```
+192.168.0.5 consumer.datacellar.cosypoc.ovh
+```
+
+> [!IMPORTANT]
+> Do not use `127.0.0.1` as this IP address will likely cause conflicts when accessing services from inside Docker containers.
 
 ## Project Structure
 
