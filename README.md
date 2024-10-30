@@ -28,6 +28,9 @@ To deploy a participant, you need to have the following prerequisites:
 - A reasonably modern Linux distribution
 - A public DNS domain name that points to your server, with ports 80 and 443 open and accessible
 
+> [!IMPORTANT]
+> Your DNS must be configured for both the domain name and the subdomain that includes the participant name. For example, if your DNS domain is `datacellar.cosypoc.ovh` and your participant name is `consumer`, your DNS must be configured for both `datacellar.cosypoc.ovh` and `consumer.datacellar.cosypoc.ovh`.
+
 > [!TIP]
 > There are scripts for your convenience in the `install` directory to help you install these prerequisites. In any case, it is recommended that you follow the official documentation for these tools.
 
