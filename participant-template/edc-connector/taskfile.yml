@@ -2,7 +2,7 @@ version: "3"
 
 vars:
   EXAMPLES_IMAGE: datacellar-connector-examples
-  COUNTER_PARTY_PROTOCOL_URL: "https://{{.PARTICIPANT_NAME}}.{{.DOMAIN_NAME}}/protocol"
+  LOCAL_PROTOCOL_URL: "https://{{.PARTICIPANT_NAME}}.{{.DOMAIN_NAME}}/protocol"
   EDC_CONNECTOR_SCHEME: "http"
   EDC_CONNECTOR_HOST: "{{.PARTICIPANT_NAME}}.{{.DOMAIN_NAME}}"
   EDC_CONNECTOR_CONNECTOR_ID: "{{.PARTICIPANT_NAME}}"
@@ -59,6 +59,19 @@ tasks:
       - >
         docker run
         --rm --network host
-        -e COUNTER_PARTY_PROTOCOL_URL={{.COUNTER_PARTY_PROTOCOL_URL}}
+        -e COUNTER_PARTY_PROTOCOL_URL={{.LOCAL_PROTOCOL_URL}}
+        {{.EXAMPLES_IMAGE}}
+        python3 /opt/examples/catalogue.py
+
+  test-catalogue-remote:
+    desc: "Run an example that connects to a remote connector to fetch its catalogue"
+    requires:
+      vars:
+        - REMOTE_PROTOCOL_URL
+    cmds:
+      - >
+        docker run
+        --rm --network host
+        -e COUNTER_PARTY_PROTOCOL_URL={{.REMOTE_PROTOCOL_URL}}
         {{.EXAMPLES_IMAGE}}
         python3 /opt/examples/catalogue.py
