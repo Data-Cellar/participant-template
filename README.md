@@ -58,12 +58,12 @@ Then you should run the task that will prompt you for the necessary information 
 task setup-participant
 ```
 
-During setup, you will need to provide the following configuration details:
+During setup, you'll need to provide several configuration details. The following list offers clarification on some of these parameters:
 
 - The **DNS domain name** of your server - This must be a public domain name so Caddy can automatically obtain HTTPS certificates through Let's Encrypt.
 - The **participant name** - A unique identifier that will be combined with your DNS domain to create the participant's full domain name.
 - The **Issuer API key** - A secret key given to you during onboarding that allows your participant to authenticate with Data Cellar's identity services and obtain verifiable credentials for data space access.
-- The **issuer DID** - The Decentralized Identifier of Data Cellar's central issuer, which acts as the trust anchor and issues verifiable credentials for all participants.
+- The **Issuer DID** - The Decentralized Identifier of Data Cellar's central issuer, which acts as the trust anchor and issues verifiable credentials for all participants.
 - The **Data Cellar API URLs** - The endpoints your participant will use to interact with Data Cellar's identity services.
 
 > [!NOTE]
