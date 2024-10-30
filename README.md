@@ -123,10 +123,10 @@ Move to the `deploy/participants/<participant-name>` directory and run the follo
 task start-all
 ```
 
-You will be prompted to confirm whether you want to generate a Legal Participant VC. If you choose "yes," provide the following details:
+You will be prompted to confirm whether you want to generate a Legal Participant VC. If you choose "yes", you'll need to provide the following details:
 
-- **Legal Name** of your organization
-- **VAT ID**
+- **Legal Name** of your organization (e.g., "CEA")
+- **VAT ID** (e.g., "FR43775685019")
 - **Country Subdivision Code** (e.g., "FR-OCC")
 
 > [!IMPORTANT]
