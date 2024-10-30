@@ -25,7 +25,7 @@ To deploy a participant, you need to have the following prerequisites:
 
 - [Docker](https://docs.docker.com/)
 - [Taskfile](https://taskfile.dev/)
-- A reasonably modern Linux distribution.`f
+- A reasonably modern Linux distribution.
 
 > [!TIP]
 > There are scripts for your convenience in the `install` directory to help you install these prerequisites. In any case, it is recommended that you follow the official documentation for these tools.
