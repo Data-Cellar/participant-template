@@ -1,9 +1,9 @@
 # Data Cellar Participant Template
 
 - [Data Cellar Participant Template](#data-cellar-participant-template)
-  - [Prerequisites](#prerequisites)
-    - [❗ About the Network Configuration](#-about-the-network-configuration)
   - [Project Structure](#project-structure)
+  - [Prerequisites](#prerequisites)
+    - [⚠️ Local DNS Resolution Configuration for Public Domain](#️-local-dns-resolution-configuration-for-public-domain)
   - [User Guide](#user-guide)
     - [Start the Proxy and Initialize a Participant](#start-the-proxy-and-initialize-a-participant)
     - [Deploy the Participant](#deploy-the-participant)
@@ -20,6 +20,12 @@ This repository contains all the essential components needed to set up a Data Ce
 > [!WARNING]
 > This repository is in an early stage of development. The codebase is not stable and the interfaces are subject to change. Some features are half-implemented.
 
+## Project Structure
+
+The `participant-template` directory contains all the necessary modules to create a participant. The configuration for all components emanates from the `.env.tmpl` file, which is a dotenv file containing several environment variable declarations. The values of these environment variables are defined during the setup process and are then substituted to create the definitive `.env` file.
+
+The `deploy` directory mainly contains the script used to create a participant: an interactive script that prompts the user for the necessary information and then configures the environment. The result is a new participant directory containing the definitive `.env` file and the complete set of services to host a participant.
+
 ## Prerequisites
 
 To deploy a participant, you need to have the following prerequisites:
@@ -35,13 +41,13 @@ To deploy a participant, you need to have the following prerequisites:
 > [!TIP]
 > There are scripts for your convenience in the `install` directory to help you install these prerequisites. In any case, it is recommended that you follow the official documentation for these tools.
 
-### ❗ About the Network Configuration
+### ⚠️ Local DNS Resolution Configuration for Public Domain
 
-The Data Cellar connector exposes multiple HTTP APIs; some intended to be exposed publicly, while others are meant to be secured and for internal use only.
+The Data Cellar connector exposes multiple HTTP APIs; some intended to be exposed publicly (i.e., the Public and Protocol APIs), while others are meant to be secured and for internal use only (i.e., the Management and Control APIs).
 
-Currently, as a temporary solution, the Caddy proxy rejects requests from non-local IP addresses that are directed to the **Management** and **Control** APIs. This behavior is suboptimal and will be improved in a future release.
+Currently, as a temporary solution, the Caddy proxy rejects requests from non-local IP addresses that are directed to the **Management** and **Control** APIs. This behavior is suboptimal and will be improved in a future release. Please check the issue tracker for updates.
 
-As a result, and for the time being, you need to ensure that local requests to your participant's DNS name (e.g., `consumer.datacellar.cosypoc.ovh`) appear to the proxy as coming from the local network. One simple way to achieve this is by updating your `/etc/hosts` file to include the following line:
+As a result—and for the time being—you need to ensure that local requests to your participant's DNS name (e.g., `consumer.datacellar.cosypoc.ovh`) appear to the proxy as coming from the local network. One simple way to achieve this is by updating your `/etc/hosts` file to include the following line:
 
 ```
 <private-ip-participant-services> <participant-name>.<domain-name>
@@ -55,12 +61,6 @@ For example:
 
 > [!IMPORTANT]
 > Do not use `127.0.0.1` as this IP address will likely cause conflicts when accessing services from inside Docker containers.
-
-## Project Structure
-
-The `participant-template` directory contains all the necessary modules to create a participant. The configuration for all components emanates from the `.env.tmpl` file, which is a dotenv file containing several environment variable declarations. The values of these environment variables are defined during the setup process and are then substituted to create the definitive `.env` file.
-
-The `deploy` directory mainly contains the script used to create a participant: an interactive script that prompts the user for the necessary information and then configures the environment. The result is a new participant directory containing the definitive `.env` file and the complete set of services to host a participant.
 
 ## User Guide
 
