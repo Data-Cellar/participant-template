@@ -47,7 +47,9 @@ The Data Cellar connector exposes multiple HTTP APIs; some intended to be expose
 
 Currently, as a temporary solution, the Caddy proxy rejects requests from non-local IP addresses that are directed to the **Management** and **Control** APIs. This behavior is suboptimal and will be improved in a future release. Please check the issue tracker for updates.
 
-As a result—and for the time being—you need to ensure that local requests to your participant's DNS name (e.g., `consumer.datacellar.cosypoc.ovh`) appear to the proxy as coming from the local network. One simple way to achieve this is by updating your `/etc/hosts` file to include the following line:
+As a result—and for the time being—you need to ensure that **local requests to your participant's DNS name** (e.g., `consumer.datacellar.cosypoc.ovh`) **appear to the proxy as coming from the local network**.
+
+Due to the characteristics of your infrastructure and DNS resolution, requests may be rejected because the proxy considers them as coming from a public network, even when accessing the service from the same machine. We've observed this behavior in environments like Google Cloud. If you encounter this issue, you can update your `/etc/hosts` file to include the following line:
 
 ```
 <private-ip-participant-services> <participant-name>.<domain-name>
