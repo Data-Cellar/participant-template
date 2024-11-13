@@ -3,7 +3,7 @@
 - [Data Cellar Participant Template](#data-cellar-participant-template)
   - [Project Structure](#project-structure)
   - [Prerequisites](#prerequisites)
-    - [⚠️ Local DNS Resolution Configuration for Public Domain](#️-local-dns-resolution-configuration-for-public-domain)
+    - [Obtain an API Key](#obtain-an-api-key)
   - [User Guide](#user-guide)
     - [Start the Proxy and Initialize a Participant](#start-the-proxy-and-initialize-a-participant)
     - [Deploy the Participant](#deploy-the-participant)
@@ -17,7 +17,7 @@
 
 This repository contains all the essential components needed to set up a Data Cellar participant. It includes a web server for hosting verifiable credentials, a participant wallet, the Data Cellar data space connector (based on the EDC connector codebase), and the Data Cellar CDE.
 
-> [!WARNING]
+> [!CAUTION]
 > This repository is in an early stage of development. The codebase is not stable and the interfaces are subject to change. Some features are half-implemented.
 
 ## Project Structure
@@ -41,28 +41,31 @@ To deploy a participant, you need to have the following prerequisites:
 > [!TIP]
 > There are scripts for your convenience in the `install` directory to help you install these prerequisites. In any case, it is recommended that you follow the official documentation for these tools.
 
-### ⚠️ Local DNS Resolution Configuration for Public Domain
+### Obtain an API Key
 
-The Data Cellar connector exposes multiple HTTP APIs; some intended to be exposed publicly (i.e., the Public and Protocol APIs), while others are meant to be secured and for internal use only (i.e., the Management and Control APIs).
+Moreover, you must complete the initial steps of the onboarding process to obtain an API key, which is required to communicate with the Data Cellar Issuer and obtain the necessary Verifiable Credentials. The sequence diagram below illustrates the onboarding process. Note that most of these steps are automated by this repository.
 
-Currently, as a temporary solution, the Caddy proxy rejects requests from non-local IP addresses that are directed to the **Management** and **Control** APIs. This behavior is suboptimal and will be improved in a future release. Please check the issue tracker for updates.
-
-As a result—and for the time being—you need to ensure that **local requests to your participant's DNS name** (e.g., `consumer.datacellar.cosypoc.ovh`) **appear to the proxy as coming from the local network**.
-
-Due to the characteristics of your infrastructure and DNS resolution, requests may be rejected because the proxy considers them as coming from a public network, even when accessing the service from the same machine. We've observed this behavior in environments like Google Cloud. If you encounter this issue, you can update your `/etc/hosts` file to include the following line:
-
+```mermaid
+sequenceDiagram
+    box Participant's Infrastructure
+    participant PWALL as Wallet
+    actor PART as Participant
+    end
+    box Data Cellar's Services
+    participant ONB as Onboarding Portal
+    participant ISS as Issuer
+    actor ADM as Admin
+    end
+    PART->>ONB: Requests access to Data Cellar
+    ADM->>ONB: Reviews and approves access request
+    ONB->>PART: Generates Data Cellar API key
+    PART->>PWALL: Registers DID
+    PART->>ONB: Requests issuance of VCs for the DID
+    ONB->>ONB: Verifies Data Cellar API key
+    ONB->>ISS: Initiates issuance process
+    Note over ISS, PWALL: The issuance process is based on OID4VC
+    ISS->>PWALL: Issues Legal Participant VCs
 ```
-<private-ip-participant-services> <participant-name>.<domain-name>
-```
-
-For example:
-
-```
-192.168.0.5 consumer.datacellar.cosypoc.ovh
-```
-
-> [!IMPORTANT]
-> Do not use `127.0.0.1` as this IP address will likely cause conflicts when accessing services from inside Docker containers.
 
 ## User Guide
 
@@ -105,7 +108,7 @@ After running the setup task, a new participant directory will be created under 
 
 #### Customize the Configuration
 
-The participant's configuration is stored in a `.env` file located at `deploy/participants/<participant-name>/.env`. You may want to review and customize the configuration values in this file to improve security and fit your needs.
+The participant's configuration is stored in a `.env` file located at `deploy/participants/<participant-name>/.env`. You **should** review and customize the configuration values in this file to improve security and fit your needs.
 
 The following table describes the most important environment variables you may want to customize:
 
@@ -116,6 +119,8 @@ The following table describes the most important environment variables you may w
 | `EDC_POSTGRES_USER`, `EDC_POSTGRES_PASSWORD`                    | Database credentials for the connector                                                                        |
 | `RABBITMQ_DEFAULT_USER`, `RABBITMQ_DEFAULT_PASS`                | Authentication credentials for the RabbitMQ message broker used by the connector                              |
 | `EDC_CONNECTOR_OPENAPI_URL`                                     | URL to the OpenAPI specification that describes the HTTP API that your connector *provides* to the data space |
+| `EDC_CONNECTOR_API_KEY`                                         | API key secret to access the APIs of the connector                                                            |
+| `SUBJECT`                                                       | Subject for the connector's certificate                                                                       |
 
 #### Start the Participant Services
 

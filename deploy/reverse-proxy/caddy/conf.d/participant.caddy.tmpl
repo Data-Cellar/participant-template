@@ -64,24 +64,12 @@ http://${PARTICIPANT_NAME}.${DOMAIN_NAME}, ${PARTICIPANT_NAME}.${DOMAIN_NAME} {
 	# EDC connector endpoints
 	#------------------------------------------------------------------
 
-	@local_network {
-		remote_ip private_ranges
-	}
-
 	handle /management/* {
-		handle @local_network {
-			reverse_proxy ${PARTICIPANT_NAME}.connector:${EDC_CONNECTOR_MANAGEMENT_PORT}
-		}
-
-		error "Access denied: Local requests only" 403
+		reverse_proxy ${PARTICIPANT_NAME}.connector:${EDC_CONNECTOR_MANAGEMENT_PORT}
 	}
 
 	handle /control/* {
-		handle @local_network {
-			reverse_proxy ${PARTICIPANT_NAME}.connector:${EDC_CONNECTOR_CONTROL_PORT}
-		}
-
-		error "Access denied: Local requests only" 403
+		reverse_proxy ${PARTICIPANT_NAME}.connector:${EDC_CONNECTOR_CONTROL_PORT}
 	}
 
 	handle /protocol/* {

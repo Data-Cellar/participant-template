@@ -7,6 +7,7 @@ services:
       PROPERTIES_FILE_PATH: /etc/connector/connector.properties
       KEYSTORE_PATH: /etc/connector/certs/cert.pfx
       KEYSTORE_PASSWORD: ${KEY_PASSW}
+      API_AUTH_KEY: ${EDC_CONNECTOR_API_KEY}
     volumes:
       - ./config/connector.properties:/etc/connector/connector.properties
       - ${CERT_FOLDER}:/etc/connector/certs

@@ -11,7 +11,7 @@ coloredlogs==15.0.1
 cryptography==41.0.7
 deepmerge==1.1.1
 dnspython==2.7.0
-edcpy==0.4.0a0
+edcpy==0.5.0
 email_validator==2.2.0
 environ-config==23.2.0
 fast-depends==2.4.12
