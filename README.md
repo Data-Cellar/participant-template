@@ -1,367 +1,240 @@
-# dc-participant
+# Data Cellar Participant Template
 
-This repository contains all the essential components needed to set up a DataCellar participant. It includes a web server for hosting verifiable credentials, a participant wallet, the EDC connector, and the CDE. These tools are designed to facilitate secure and efficient data exchange within the DataCellar dataspace.
+- [Data Cellar Participant Template](#data-cellar-participant-template)
+  - [Project Structure](#project-structure)
+  - [Prerequisites](#prerequisites)
+    - [Obtain an API Key](#obtain-an-api-key)
+  - [User Guide](#user-guide)
+    - [Start the Proxy and Initialize a Participant](#start-the-proxy-and-initialize-a-participant)
+    - [Deploy the Participant](#deploy-the-participant)
+      - [Customize the Configuration](#customize-the-configuration)
+      - [Start the Participant Services](#start-the-participant-services)
+      - [Run an Example to Test the Connector](#run-an-example-to-test-the-connector)
+  - [Other Tasks and Notes](#other-tasks-and-notes)
+    - [Access to the Credentials Manager API](#access-to-the-credentials-manager-api)
+    - [Register a Legal Participant in the Global Catalogue](#register-a-legal-participant-in-the-global-catalogue)
+  - [Next Steps](#next-steps)
+  - [License](#license)
+
+This repository contains all the essential components needed to set up a Data Cellar participant. It includes a web server for hosting verifiable credentials, a participant wallet, the Data Cellar data space connector (based on the EDC connector codebase), and the Data Cellar CDE.
+
+> [!CAUTION]
+> This repository is in an early stage of development. The codebase is not stable and the interfaces are subject to change. Some features are half-implemented.
 
 ## Project Structure
 
-```
-├── deploy
-│   ├── participants
-│   ├── reverse-proxy
-│   └── taskfile.yml
-├── install
-│   ├── install_docker.sh
-│   └── install_taskfile.sh
-├── LICENSE
-├── participant-template
-│   ├── cde
-│   ├── credentials-manager
-│   ├── did-server
-│   ├── edc-connector
-│   ├── reverse-proxy
-│   ├── scripts
-│   ├── store
-│   ├── wallet
-│   ├── .env.tmpl
-│   └── taskfile.yml
-├── README.md
-```
+The `participant-template` directory contains all the necessary modules to create a participant. The configuration for all components emanates from the `.env.tmpl` file, which is a dotenv file containing several environment variable declarations. The values of these environment variables are defined during the setup process and are then substituted to create the definitive `.env` file.
 
-The `participant-template` directory contains all the necessary modules to create a participant. All component configurations are defined in the `.env.tmpl` file.
+The `deploy` directory mainly contains the script used to create a participant: an interactive script that prompts the user for the necessary information and then configures the environment. The result is a new participant directory containing the definitive `.env` file and the complete set of services to host a participant.
 
-The `deploy` directory contains the script used to create a participant. It uses **Taskfile** and includes a single task: `setup-participant`.
+## Prerequisites
 
-### Available Tasks
+To deploy a participant, you need to have the following prerequisites:
 
-```yaml
-task: Available tasks for this project:
-   * create-legalparticipant:                                       Create Legal Participant
-   * cde:config:                                                    Config DID Server
-   * cde:start:                                                     Start DID Server
-   * cde:stop:                                                      Stop DID Server
-   * connector:config:                                              Config Connector
-   * connector:run-examples:                                        Runs the Consumer Pull/Push example script from the consumer
-   * connector:start:                                               Start Connector
-   * connector:start-consumer:                                      Start Connector Consumer
-   * connector:start-provider:                                      Start Connector Provider
-   * connector:stop:                                                Stop Connector
-   * credentials-manager:create-legalparticipant:                   Create a legal participant with provided legalname, vatid, and country_subdivision_code
-   * credentials-manager:provision-wallet:                          Provision Wallet
-   * credentials-manager:register-legalparticipant-catalogue:       Register a legal participant to the global catalogue
-   * credentials-manager:start-api:                                 Start Credentials Manager API
-   * credentials-manager:stop-api:                                  Stop Credentials Manager
-   * did-server:config:                                             Config DID Server
-   * did-server:start:                                              Start DID Server
-   * did-server:stop:                                               Stop DID Server
-   * proxy:restart:                                                 Restart Reverse Proxy
-   * proxy:start:                                                   Start Reverse Proxy
-   * proxy:stop:                                                    Stop Reverse Proxy
-   * wallet:config:                                                 Config Wallet
-   * wallet:start:                                                  Start Wallet
-   * wallet:stop:                                                   Stop Wallet
+- [Docker](https://docs.docker.com/)
+- [Taskfile](https://taskfile.dev/)
+- A reasonably modern Linux distribution
+- A public DNS domain name that points to your server, with ports 80 and 443 open and accessible
+
+> [!IMPORTANT]
+> Your DNS must be configured for both the domain name and the subdomain that includes the participant name. For example, if your DNS domain is `datacellar.cosypoc.ovh` and your participant name is `consumer`, your DNS must be configured for both `datacellar.cosypoc.ovh` and `consumer.datacellar.cosypoc.ovh`.
+
+There are scripts for your convenience in the `install` directory to help you install these prerequisites. In any case, it is recommended that you follow the official documentation for these tools.
+
+### Obtain an API Key
+
+Moreover, you must complete the initial steps of the onboarding process to obtain an API key, which is required to communicate with the Data Cellar Issuer and obtain the necessary Verifiable Credentials. The sequence diagram below illustrates the onboarding process. Note that most of these steps are automated by this repository.
+
+```mermaid
+sequenceDiagram
+    box Participant's Infrastructure
+    participant PWALL as Wallet
+    actor PART as Participant
+    end
+    box Data Cellar's Services
+    participant ONB as Onboarding Portal
+    participant ISS as Issuer
+    actor ADM as Admin
+    end
+    PART->>ONB: Requests access to Data Cellar
+    ADM->>ONB: Reviews and approves access request
+    ONB->>PART: Generates Data Cellar API key
+    PART->>PWALL: Registers DID
+    PART->>ONB: Requests issuance of VCs for the DID
+    ONB->>ONB: Verifies Data Cellar API key
+    ONB->>ISS: Initiates issuance process
+    Note over ISS, PWALL: The issuance process is based on OID4VC
+    ISS->>PWALL: Issues Legal Participant VCs
 ```
 
-## Deploy a New Participant
+The **web page of the onboarding portal** is available at:
 
-To deploy a new participant, navigate to the `deploy` directory and use the `task setup-participant` command.
+https://idp.datacellar.cosypoc.ovh
 
-### Prerequisites
+However, please note that the onboarding portal is a work in progress. If you encounter any issues, or if the portal is unavailable, please contact the Data Cellar team.
 
-Before deploying a participant, ensure that Docker and Taskfile are installed. Navigate to the `install` directory and run the following commands:
+## User Guide
 
-```bash
-$ sudo ./install_docker.sh 
-$ sudo ./install_taskfile.sh 
+### Start the Proxy and Initialize a Participant
+
+The Data Cellar Participant Template uses Caddy as a reverse proxy to manage the various APIs and HTTP services exposed by its components. Before proceeding with deployment, ensure Caddy is running by navigating to the `deploy` directory and executing the following command:
+
+```
+task start-proxy
 ```
 
-### Steps to Deploy a Consumer Participant
+When the task completes, you should be able to verify that a new container named `datacellar.caddy` is running.
 
-In this example, we will assume that the participant is named **consumer**.
+> [!IMPORTANT]
+> The proxy is shared by all participants - only one proxy container should be running at a time.
 
-1. Navigate to the `deploy` directory:
+Then you should run the task that will prompt you for the necessary information to configure a new participant:
 
-   ```bash
-   cd deploy
-   ```
-
-2. Run the task to set up the participant:
-
-   ```bash
-   task setup-participant
-   ```
-
-3. Follow the prompts to provide the required information, such as:
-   - Participant Name 
-   - Domain Name
-   - Participant Folder
-   - Proxy Folder
-   - Let's Encrypt usage
-   - `DATACELLAR_IDP_URL`
-   - `ISSUER_API_BASE_URL`
-   - `ISSUER_DID`
-   - `ISSUER_API_KEY`
-   - `VERIFIER_API_BASE_URL`
-
-    > **Note**: The environment variables will be set according to your inputs. Ensure that the configuration is correct before proceeding. The setup process will create a new participant in the specified folder and configure it.
-
-    > If a participant folder already exists, the script will stop all services and delete the folder before creating a new one. Ensure that the folder and proxy paths you provide are correct and accessible.
-
-4. Once configured, navigate to the participant directory and start all services:
-
-   ```bash
-   cd participant/consumer  
-   task start-all
-   ```
-   > the wallet will be configured and provisioned at the startup time, 
-   > a did web document will be generated and stored in the wallet 
-
-   You will be prompted to confirm whether you want to generate a legal Participant VC. If you choose "yes," provide the following details:
-   - **Legal Name**
-   - **VAT ID** (A valid VAT ID is required)
-   - **Country Subdivision Code** (A valid country subdivision code is required)
-
-   The system will use the OpenID4VC protocol to request the following Verifiable Credentials (VCs) from the Datacellar Issuer:
-   - Terms and Conditions
-   - Legal Registration Number
-   - Legal Participant
-
-   > **Tip**: You can rerun this step later by executing the **task credentials-manager:create-legalparticipant**.
-
-   Afterward, you will be asked whether you want to start a connector. Choose **consumer** when prompted to select the connector type.
-
-### Steps to Deploy a Provider Participant
-
-Repeat the steps above, but this time, use **provider** as the participant name and select the **provider** connector type.
-
-## Running Examples
-
-Once both the consumer and provider connectors are running, you can test data exchange between them. In a new terminal, navigate to the **consumer** directory and run the following task:
-
-```bash
-task connector:run-examples
+```
+task setup-participant
 ```
 
-You will be prompted to choose a test type (Pull/Push or Catalogue). For the `counter_party_id`, enter **provider**, and for the `counter_party_url`, leave the default value.
+During setup, you'll need to provide several configuration details. The following list offers clarification on some of these parameters:
 
-you need to see this log
-<details>
-<summary>console output</summary>
+- The **DNS domain name** of your server - This must be a public domain name so Caddy can automatically obtain HTTPS certificates through Let's Encrypt.
+- The **participant name** - A unique identifier that will be combined with your DNS domain to create the participant's full domain name.
+- The **Issuer API key** - A secret key given to you during onboarding that allows your participant to authenticate with Data Cellar's identity services and obtain verifiable credentials for data space access.
+- The **Issuer DID** - The Decentralized Identifier of Data Cellar's central issuer, which acts as the trust anchor and issues verifiable credentials for all participants.
+- The **Data Cellar API URLs** - The endpoints your participant will use to interact with Data Cellar's identity services.
+- The **OpenAPI specification URL** - The URL to the OpenAPI specification that describes the HTTP API that your connector *provides* to the data space.
 
-```console
-debian@vps-79d2c53f:~/datacellar/dc-participant/deploy/participants/consumer$ task connector:run-examples
-Run examples (pull/push/catalogue) [catalogue]: 
-Set counter_party_connector_id (provider): 
-Set COUNTER_PARTY_PROTOCOL_URL (https://provider.datacellar.cosypoc.ovh/protocol): 
-2024-10-23 00:55:08 c034b11ec33a asyncio[8] DEBUG Using selector: EpollSelector
-2024-10-23 00:55:08 c034b11ec33a environ_config[8] DEBUG looking for env var 'EDC_CERT_PATH'.
-2024-10-23 00:55:08 c034b11ec33a environ_config[8] DEBUG looking for env var 'EDC_RABBIT_URL'.
-2024-10-23 00:55:08 c034b11ec33a environ_config[8] DEBUG looking for env var 'EDC_HTTP_API_PORT'.
-2024-10-23 00:55:08 c034b11ec33a environ_config[8] DEBUG looking for env var 'EDC_CONNECTOR_SCHEME'.
-2024-10-23 00:55:08 c034b11ec33a environ_config[8] DEBUG looking for env var 'EDC_CONNECTOR_HOST'.
-2024-10-23 00:55:08 c034b11ec33a environ_config[8] DEBUG looking for env var 'EDC_CONNECTOR_CONNECTOR_ID'.
-2024-10-23 00:55:08 c034b11ec33a environ_config[8] DEBUG looking for env var 'EDC_CONNECTOR_PARTICIPANT_ID'.
-2024-10-23 00:55:08 c034b11ec33a environ_config[8] DEBUG looking for env var 'EDC_CONNECTOR_MANAGEMENT_PORT'.
-2024-10-23 00:55:08 c034b11ec33a environ_config[8] DEBUG looking for env var 'EDC_CONNECTOR_MANAGEMENT_PATH'.
-2024-10-23 00:55:08 c034b11ec33a environ_config[8] DEBUG looking for env var 'EDC_CONNECTOR_CONTROL_PORT'.
-2024-10-23 00:55:08 c034b11ec33a environ_config[8] DEBUG looking for env var 'EDC_CONNECTOR_CONTROL_PATH'.
-2024-10-23 00:55:08 c034b11ec33a environ_config[8] DEBUG looking for env var 'EDC_CONNECTOR_PUBLIC_PORT'.
-2024-10-23 00:55:08 c034b11ec33a environ_config[8] DEBUG looking for env var 'EDC_CONNECTOR_PUBLIC_PATH'.
-2024-10-23 00:55:08 c034b11ec33a environ_config[8] DEBUG looking for env var 'EDC_CONNECTOR_PROTOCOL_PORT'.
-2024-10-23 00:55:08 c034b11ec33a environ_config[8] DEBUG looking for env var 'EDC_CONNECTOR_PROTOCOL_PATH'.
-2024-10-23 00:55:08 c034b11ec33a __main__[8] DEBUG Configuration:
-AppConfig(cert_path='/opt/src/config/certs/consumer.datacellar.cosypoc.ovh.crt', rabbit_url='amqp://guest:guest@consumer.connector-broker:5672', http_api_port=8000, connector=AppConfig.Connector(scheme='http', host='consumer.connector', connector_id='consumer', participant_id='consumer', management_port=9193, management_path='/management', control_port=9192, control_path='/control', public_port=9291, public_path='/public', protocol_port=9194, protocol_path='/protocol'))
-2024-10-23 00:55:08 c034b11ec33a httpx[8] DEBUG load_ssl_context verify=True cert=None trust_env=True http2=False
-2024-10-23 00:55:08 c034b11ec33a httpx[8] DEBUG load_verify_locations cafile='/usr/local/lib/python3.8/dist-packages/certifi/cacert.pem'
-2024-10-23 00:55:08 c034b11ec33a edcpy.edc_api[8] DEBUG -> POST http://consumer.connector:9193/management/v2/catalog/request
-{'@context': {'@vocab': 'https://w3id.org/edc/v0.0.1/ns/'},
- 'counterPartyAddress': 'https://provider.datacellar.cosypoc.ovh/protocol',
- 'protocol': 'dataspace-protocol-http'}
-2024-10-23 00:55:08 c034b11ec33a httpcore.connection[8] DEBUG connect_tcp.started host='consumer.connector' port=9193 local_address=None timeout=60 socket_options=None
-2024-10-23 00:55:08 c034b11ec33a httpcore.connection[8] DEBUG connect_tcp.complete return_value=<httpcore._backends.anyio.AnyIOStream object at 0x7f53652fe850>
-2024-10-23 00:55:08 c034b11ec33a httpcore.http11[8] DEBUG send_request_headers.started request=<Request [b'POST']>
-2024-10-23 00:55:08 c034b11ec33a httpcore.http11[8] DEBUG send_request_headers.complete
-2024-10-23 00:55:08 c034b11ec33a httpcore.http11[8] DEBUG send_request_body.started request=<Request [b'POST']>
-2024-10-23 00:55:08 c034b11ec33a httpcore.http11[8] DEBUG send_request_body.complete
-2024-10-23 00:55:08 c034b11ec33a httpcore.http11[8] DEBUG receive_response_headers.started request=<Request [b'POST']>
-2024-10-23 00:55:13 c034b11ec33a httpcore.http11[8] DEBUG receive_response_headers.complete return_value=(b'HTTP/1.1', 200, b'OK', [(b'Date', b'Wed, 23 Oct 2024 00:55:08 GMT'), (b'Content-Type', b'application/json'), (b'Content-Length', b'2904')])
-2024-10-23 00:55:13 c034b11ec33a httpx[8] INFO HTTP Request: POST http://consumer.connector:9193/management/v2/catalog/request "HTTP/1.1 200 OK"
-2024-10-23 00:55:13 c034b11ec33a httpcore.http11[8] DEBUG receive_response_body.started request=<Request [b'POST']>
-2024-10-23 00:55:13 c034b11ec33a httpcore.http11[8] DEBUG receive_response_body.complete
-2024-10-23 00:55:13 c034b11ec33a httpcore.http11[8] DEBUG response_closed.started
-2024-10-23 00:55:13 c034b11ec33a httpcore.http11[8] DEBUG response_closed.complete
-2024-10-23 00:55:13 c034b11ec33a edcpy.edc_api[8] DEBUG <- POST http://consumer.connector:9193/management/v2/catalog/request
-{'@context': {'@vocab': 'https://w3id.org/edc/v0.0.1/ns/',
-              'dcat': 'http://www.w3.org/ns/dcat#',
-              'dct': 'http://purl.org/dc/terms/',
-              'dspace': 'https://w3id.org/dspace/v0.8/',
-              'edc': 'https://w3id.org/edc/v0.0.1/ns/',
-              'odrl': 'http://www.w3.org/ns/odrl/2/'},
- '@id': 'd2dd5254-fdad-4178-83fe-6bd5c0532448',
- '@type': 'dcat:Catalog',
- 'dcat:dataset': [{'@id': 'POST-consumption-prediction',
-                   '@type': 'dcat:Dataset',
-                   'dcat:distribution': [{'@type': 'dcat:Distribution',
-                                          'dcat:accessService': 'c6c5a207-1ca3-4aec-9c6e-234990c53169',
-                                          'dct:format': {'@id': 'HttpProxy-PUSH'}},
-                                         {'@type': 'dcat:Distribution',
-                                          'dcat:accessService': 'c6c5a207-1ca3-4aec-9c6e-234990c53169',
-                                          'dct:format': {'@id': 'HttpData-PULL'}},
-                                         {'@type': 'dcat:Distribution',
-                                          'dcat:accessService': 'c6c5a207-1ca3-4aec-9c6e-234990c53169',
-                                          'dct:format': {'@id': 'HttpData-PUSH'}}],
-                   'id': 'POST-consumption-prediction',
-                   'name': 'POST /consumption/prediction '
-                           '(run_consumption_prediction_consumption_prediction_post)',
-                   'odrl:hasPolicy': {'@id': 'Y29udHJhY3RkZWYtUE9TVC1jb25zdW1wdGlvbi1wcmVkaWN0aW9u:UE9TVC1jb25zdW1wdGlvbi1wcmVkaWN0aW9u:NzhkNDJkZGItZGYxOS00MGYxLTgzNDItMGVjZTM1ZWU1MGNi',
-                                      '@type': 'odrl:Offer',
-                                      'odrl:obligation': [],
-                                      'odrl:permission': [],
-                                      'odrl:prohibition': []}},
-                  {'@id': 'POST-dummy',
-                   '@type': 'dcat:Dataset',
-                   'dcat:distribution': [{'@type': 'dcat:Distribution',
-                                          'dcat:accessService': 'c6c5a207-1ca3-4aec-9c6e-234990c53169',
-                                          'dct:format': {'@id': 'HttpProxy-PUSH'}},
-                                         {'@type': 'dcat:Distribution',
-                                          'dcat:accessService': 'c6c5a207-1ca3-4aec-9c6e-234990c53169',
-                                          'dct:format': {'@id': 'HttpData-PULL'}},
-                                         {'@type': 'dcat:Distribution',
-                                          'dcat:accessService': 'c6c5a207-1ca3-4aec-9c6e-234990c53169',
-                                          'dct:format': {'@id': 'HttpData-PUSH'}}],
-                   'id': 'POST-dummy',
-                   'name': 'POST /dummy (process_data_dummy_post)',
-                   'odrl:hasPolicy': {'@id': 'Y29udHJhY3RkZWYtUE9TVC1kdW1teQ==:UE9TVC1kdW1teQ==:ZTJiMTI1YzgtZGQ0Mi00YjlhLTlmMTUtYzNiMzRjNjk0YzNm',
-                                      '@type': 'odrl:Offer',
-                                      'odrl:obligation': [],
-                                      'odrl:permission': [],
-                                      'odrl:prohibition': []}},
-                  {'@id': 'GET-consumption',
-                   '@type': 'dcat:Dataset',
-                   'dcat:distribution': [{'@type': 'dcat:Distribution',
-                                          'dcat:accessService': 'c6c5a207-1ca3-4aec-9c6e-234990c53169',
-                                          'dct:format': {'@id': 'HttpProxy-PUSH'}},
-                                         {'@type': 'dcat:Distribution',
-                                          'dcat:accessService': 'c6c5a207-1ca3-4aec-9c6e-234990c53169',
-                                          'dct:format': {'@id': 'HttpData-PULL'}},
-                                         {'@type': 'dcat:Distribution',
-                                          'dcat:accessService': 'c6c5a207-1ca3-4aec-9c6e-234990c53169',
-                                          'dct:format': {'@id': 'HttpData-PUSH'}}],
-                   'id': 'GET-consumption',
-                   'name': 'GET /consumption '
-                           '(get_consumption_data_consumption_get)',
-                   'odrl:hasPolicy': {'@id': 'Y29udHJhY3RkZWYtR0VULWNvbnN1bXB0aW9u:R0VULWNvbnN1bXB0aW9u:OWIyNjA1YzctZTAzMi00NWE5LThhMDYtNzcwMWMxNDNjMTBk',
-                                      '@type': 'odrl:Offer',
-                                      'odrl:obligation': [],
-                                      'odrl:permission': [],
-                                      'odrl:prohibition': []}}],
- 'dcat:service': {'@id': 'c6c5a207-1ca3-4aec-9c6e-234990c53169',
-                  '@type': 'dcat:DataService',
-                  'dct:endpointUrl': 'https://provider.datacellar.cosypoc.ovh/protocol',
-                  'dct:terms': 'connector'},
- 'dspace:participantId': 'provider',
- 'participantId': 'provider'}
-2024-10-23 00:55:13 c034b11ec33a httpcore.connection[8] DEBUG close.started
-2024-10-23 00:55:13 c034b11ec33a httpcore.connection[8] DEBUG close.complete
-2024-10-23 00:55:13 c034b11ec33a __main__[8] INFO Found datasets:
-[{'@id': 'POST-consumption-prediction',
+Unless you have a specific reason to change them, leave the default values as they are. For example, while the script offers the flexibility to modify the API URLs of the Data Cellar services, you will most likely want to keep the default URLs that connect to the production Data Cellar services.
+
+> [!NOTE]
+> If a participant folder already exists, the script will stop all services and delete the folder before creating a new one. Ensure that the folder and proxy paths you provide are correct and accessible.
+
+### Deploy the Participant
+
+After running the setup task, a new participant directory will be created under the `deploy/participants/<participant-name>` path. This directory contains the software services that have been customized for your configuration and need to be started to run your participant.
+
+#### Customize the Configuration
+
+The participant's configuration is stored in a `.env` file located at `deploy/participants/<participant-name>/.env`.
+
+> [!WARNING]      
+> You **should** review and customize some of the configuration values in this file to improve security and fit your needs. Otherwise, you'll be using the default credentials for some services, which poses a significant security risk.
+
+The following table describes the most important environment variables you may want to customize:
+
+| Variable                                                        | Description                                                                                                   |
+| --------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `WALLET_USER_NAME`, `WALLET_USER_EMAIL`, `WALLET_USER_PASSWORD` | Authentication credentials for accessing your local wallet                                                    |
+| `KEY_PASSW`                                                     | Password for the certificate store used by the connector                                                      |
+| `EDC_POSTGRES_USER`, `EDC_POSTGRES_PASSWORD`                    | Database credentials for the connector                                                                        |
+| `RABBITMQ_DEFAULT_USER`, `RABBITMQ_DEFAULT_PASS`                | Authentication credentials for the RabbitMQ message broker used by the connector                              |
+| `EDC_CONNECTOR_OPENAPI_URL`                                     | URL to the OpenAPI specification that describes the HTTP API that your connector *provides* to the data space |
+| `EDC_CONNECTOR_API_KEY`                                         | API key secret to access the APIs of the connector                                                            |
+| `SUBJECT`                                                       | Subject for the connector's certificate                                                                       |
+
+#### Start the Participant Services
+
+Move to the `deploy/participants/<participant-name>` directory and run the following task:
+
+```
+task start-all
+```
+
+You will be prompted to confirm whether you want to generate a Legal Participant VC. If you choose "yes", you'll need to provide the following details:
+
+- **Legal Name** of your organization (e.g., "CEA")
+- **VAT ID** (e.g., "FR43775685019")
+- **Country Subdivision Code** (e.g., "FR-OCC")
+
+> [!IMPORTANT]
+> The VAT ID and Country Subdivision Code must be **valid** to successfully complete the VC issuance process.
+
+The system will request the following VCs from the Data Cellar Issuer using the OpenID For Verifiable Credentials (OIDC4VC) protocol:
+
+- Terms and Conditions
+- Legal Registration Number 
+- Legal Participant
+
+> [!TIP]
+> You can rerun this step later by executing the `credentials-manager:create-legalparticipant` task.
+
+> [!NOTE]
+> The wallet will be configured and provisioned during the startup of the participant, and a DID web document will be generated and stored in the wallet.
+
+#### Run an Example to Test the Connector
+
+You can test the connector by running an example that fetches the available datasets (catalogue) from your connector:
+
+```
+task connector:test-catalogue
+```
+
+You should see that the script finishes successfully and outputs the available datasets (catalogue) in the console, similar to this:
+
+```
+[...]
+
+[{'@id': 'GET-pet-findByTags',
   '@type': 'dcat:Dataset',
   'dcat:distribution': [{'@type': 'dcat:Distribution',
-                         'dcat:accessService': 'c6c5a207-1ca3-4aec-9c6e-234990c53169',
+                         'dcat:accessService': '7fbd5b95-d607-423c-9278-768916b60f65',
                          'dct:format': {'@id': 'HttpProxy-PUSH'}},
                         {'@type': 'dcat:Distribution',
-                         'dcat:accessService': 'c6c5a207-1ca3-4aec-9c6e-234990c53169',
+                         'dcat:accessService': '7fbd5b95-d607-423c-9278-768916b60f65',
                          'dct:format': {'@id': 'HttpData-PULL'}},
                         {'@type': 'dcat:Distribution',
-                         'dcat:accessService': 'c6c5a207-1ca3-4aec-9c6e-234990c53169',
+                         'dcat:accessService': '7fbd5b95-d607-423c-9278-768916b60f65',
                          'dct:format': {'@id': 'HttpData-PUSH'}}],
-  'id': 'POST-consumption-prediction',
-  'name': 'POST /consumption/prediction '
-          '(run_consumption_prediction_consumption_prediction_post)',
-  'odrl:hasPolicy': {'@id': 'Y29udHJhY3RkZWYtUE9TVC1jb25zdW1wdGlvbi1wcmVkaWN0aW9u:UE9TVC1jb25zdW1wdGlvbi1wcmVkaWN0aW9u:NzhkNDJkZGItZGYxOS00MGYxLTgzNDItMGVjZTM1ZWU1MGNi',
+  'id': 'GET-pet-findByTags',
+  'name': 'GET /pet/findByTags (findPetsByTags)',
+  'odrl:hasPolicy': {'@id': 'Y29udHJhY3RkZWYtR0VULXBldC1maW5kQnlUYWdz:R0VULXBldC1maW5kQnlUYWdz:YjM2NDIwNWItZmFkZi00MGI2LWJhM2EtYjVhOTQ1MzhjNDQ5',
                      '@type': 'odrl:Offer',
                      'odrl:obligation': [],
                      'odrl:permission': [],
                      'odrl:prohibition': []}},
- {'@id': 'POST-dummy',
-  '@type': 'dcat:Dataset',
-  'dcat:distribution': [{'@type': 'dcat:Distribution',
-                         'dcat:accessService': 'c6c5a207-1ca3-4aec-9c6e-234990c53169',
-                         'dct:format': {'@id': 'HttpProxy-PUSH'}},
-                        {'@type': 'dcat:Distribution',
-                         'dcat:accessService': 'c6c5a207-1ca3-4aec-9c6e-234990c53169',
-                         'dct:format': {'@id': 'HttpData-PULL'}},
-                        {'@type': 'dcat:Distribution',
-                         'dcat:accessService': 'c6c5a207-1ca3-4aec-9c6e-234990c53169',
-                         'dct:format': {'@id': 'HttpData-PUSH'}}],
-  'id': 'POST-dummy',
-  'name': 'POST /dummy (process_data_dummy_post)',
-  'odrl:hasPolicy': {'@id': 'Y29udHJhY3RkZWYtUE9TVC1kdW1teQ==:UE9TVC1kdW1teQ==:ZTJiMTI1YzgtZGQ0Mi00YjlhLTlmMTUtYzNiMzRjNjk0YzNm',
-                     '@type': 'odrl:Offer',
-                     'odrl:obligation': [],
-                     'odrl:permission': [],
-                     'odrl:prohibition': []}},
- {'@id': 'GET-consumption',
-  '@type': 'dcat:Dataset',
-  'dcat:distribution': [{'@type': 'dcat:Distribution',
-                         'dcat:accessService': 'c6c5a207-1ca3-4aec-9c6e-234990c53169',
-                         'dct:format': {'@id': 'HttpProxy-PUSH'}},
-                        {'@type': 'dcat:Distribution',
-                         'dcat:accessService': 'c6c5a207-1ca3-4aec-9c6e-234990c53169',
-                         'dct:format': {'@id': 'HttpData-PULL'}},
-                        {'@type': 'dcat:Distribution',
-                         'dcat:accessService': 'c6c5a207-1ca3-4aec-9c6e-234990c53169',
-                         'dct:format': {'@id': 'HttpData-PUSH'}}],
-  'id': 'GET-consumption',
-  'name': 'GET /consumption (get_consumption_data_consumption_get)',
-  'odrl:hasPolicy': {'@id': 'Y29udHJhY3RkZWYtR0VULWNvbnN1bXB0aW9u:R0VULWNvbnN1bXB0aW9u:OWIyNjA1YzctZTAzMi00NWE5LThhMDYtNzcwMWMxNDNjMTBk',
-                     '@type': 'odrl:Offer',
-                     'odrl:obligation': [],
-                     'odrl:permission': [],
-                     'odrl:prohibition': []}}]
+
+[...]
 ```
-</details>
 
-## Notes
+> [!TIP]
+> If you haven't defined the URL to the OpenAPI file for the API provided by your connector, your catalogue will be empty (i.e., your connector will only act as a consumer).
 
-- The credentials-manager webui is under-developement
-- you can use the swagger-ui hosted on **https://{{your_did_web_domain}}/api/v1/docs**
+## Other Tasks and Notes
 
+### Access to the Credentials Manager API
 
-| **Tag**               | **Type** | **URI**                                                 | **Description**                                 |
-|-----------------------|----------|---------------------------------------------------------|-------------------------------------------------|
-| **Auth**              | POST     | `/login`                                                | Login                                           |
-| **DIDs**              | GET      | `/dids`                                                 | Get DIDs                                        |
-|                       | POST     | `/dids/create/web`                                      | Create DID                                      |
-|                       | DELETE   | `/dids/{did}`                                           | Delete DID                                      |
-| **Credentials**       | GET      | `/credentials`                                          | Get Credentials                                 |
-|                       | GET      | `/credentials/{credentialId}`                           | View Credential                                 |
-|                       | DELETE   | `/credentials/{credentialId}`                           | Delete Credential                               |
-| **Credential Exchange**| POST     | `/credentials/useOfferRequest`                          | Accept Credential Offer                         |
-|                       | POST     | `/credentials/matchCredentialsForPresentationDefinition`| Match Credentials for Presentation Definition   |
-| **DataCellar**        | POST     | `/vc/TermsAndConditions`                                | Get Terms and Conditions                        |
-|                       | POST     | `/vc/LegalRegistrationNumber`                           | Get Legal Registration Number                   |
-|                       | POST     | `/vc/LegalParticipant`                                  | Get Legal Participant                           |
-|                       | POST     | `/vp/self_sign`                                         | VP Self Sign                                    |
-|                       | POST     | `/vp/issuer_sign`                                       | VP Issuer Sign                                  |
-| **Verifier**          | POST     | `/verify/proof`                                         | Verify Credential Signature                     |
+You can use the Credentials Manager API to interact with the Data Cellar Identity Services. For example, the API allows you to:
+
+- View all Verifiable Credentials stored in your wallet
+- Sign existing Verifiable Credentials
+- Verify proofs of Verifiable Credentials
+
+The **API documentation** is available at:
+
+```
+https://<fully-qualified-participant-domain>/api/v1/docs
+```
+
+For example, if your participant is named `consumer` and your DNS domain is `datacellar.cosypoc.ovh`, the API documentation will be available at `https://consumer.datacellar.cosypoc.ovh/api/v1/docs`.
 
 ### Register a Legal Participant in the Global Catalogue
+
 To register a legal participant in the global catalogue, run the following task:
+
+```
+task credentials-manager:register-legalparticipant-catalogue
+```
+
+You will be prompted to enter the ID or URL of the Legal Participant's Verifiable Presentation (VP), which was generated during the participant deployment process.
+
+The catalogue registration request is sent to the Data Cellar Identity Provider, which handles the registration in the catalogue. This process was designed this way for governance and authorization reasons. The Data Cellar administrator must approve the registration of a new participant in the catalogue.
+
+> [!NOTE]
+> This feature has been implemented but is not fully connected to the global catalogue, as it is not currently deployed.
+
+For example:
 
 ```console
 $ task credentials-manager:register-legalparticipant-catalogue
-```
-
-You will be prompted to enter the ID of the Legal Participant's VP, which was generated in step 4 of the participant deployment process (URL).
-
-> **Note**: The catalogue registration request is sent to the Datacellar IDP, which handles the registration in the catalogue. This process was designed this way for legal and authorization reasons. The Datacellar administrator must approve the registration of a new participant in the catalogue.
-> This feature has been implemented but is not fully connected to the global catalogue, as it is not currently deployed.     
-
-<details>
-<summary> show logs</summary>
-
-```console
-debian@vps-79d2c53f:~/datacellar/dc-participant/deploy/participants/consumer$ task credentials-manager:register-legalparticipant-catalogue
 task: [credentials-manager:start-api] docker compose -p consumer up credentials-api --wait
 [+] Running 1/1
  ✔ Container consumer.credentials-api  Healthy                                                                                                                                   0.0s 
@@ -370,9 +243,21 @@ VP Legal Participant (url or id): https://consumer.datacellar.cosypoc.ovh/vp/bc6
 2024-10-23 15:01:18.957 | INFO     | __main__:<module>:85 - [Global Catalogue] -> register legal participant
 2024-10-23 15:01:18.957 | INFO     | __main__:<module>:86 - [LEGAL_PARTICIPANT_ID] -> https://consumer.datacellar.cosypoc.ovh/vp/bc6ca012-e5bd-46a2-99a0-76edfef0c105.json
 2024-10-23 15:01:22.268 | INFO     | __main__:<module>:91 - {'status': 'success', 'message': 'All credentials verified successfully', 'details': 'registration legalParticipant into the catalogue is under-construction'}
-debian@vps-79d2c53f:~/datacellar/dc-participant/deploy/participants/consumer$ 
 ```
-</details>
+
+## Next Steps
+
+After the deployment, you'll have all the services required to operate in the Data Cellar data space. This means that, among other services, you'll have access to a data space connector based on the [Eclipse Dataspace Components (EDC) Connector](https://github.com/eclipse-edc/Connector) framework. You can check the specific launcher and extensions used in this connector in the [fundacionctic/connector-building-blocks](https://github.com/fundacionctic/connector-building-blocks) repository.
+
+> [!NOTE]
+> Data Cellar has developed bespoke extensions on top of the EDC Connector framework to support the specific needs of the Data Cellar data space. These extensions are necessary for an EDC connector to interoperate with the Data Cellar infrastructure.
+
+If you have defined the URL to the OpenAPI specification of the HTTP API that is exposed by your connector to the data space (i.e., variable `EDC_CONNECTOR_OPENAPI_URL` in the `.env` file of a participant), and you do not want to consume any data from the data space, you are essentially finished. At this point, your datasets should eventually be available in the data space.
+
+If you wish to consume data from the data space, you will need to interact with the APIs of your connector to communicate with other connectors in the data space, as illustrated in the [eclipse-edc/Samples](https://github.com/eclipse-edc/Samples) repository.
+
+To help ease the learning curve, Data Cellar has developed a small Python package named `edcpy` that wraps the logic to interact with the APIs of your connector. You can find it [published on PyPI](https://pypi.org/project/edcpy/). The source code is [available here](https://github.com/fundacionctic/connector-building-blocks/tree/main/edcpy), and [this link](https://github.com/fundacionctic/connector-building-blocks/tree/main/example) provides examples of how to use it.
 
 ## License
+
 This project is licensed under the terms outlined in the [LICENSE](LICENSE) file.

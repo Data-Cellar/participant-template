@@ -1,3 +1,4 @@
+---
 #-------------------------------------------------------------------
 # authors     [ Radhouene AZZABI ]
 # contacts    [ azzabi.radhouene@cea.fr ]
@@ -8,19 +9,17 @@
 
 version: "3"
 
-dotenv: ['.env']
+dotenv: [".env"]
 
 includes:
-  wallet: 'wallet/taskfile.yml'
-  did-server: 'did-server/taskfile.yml'
-  proxy: 'reverse-proxy/taskfile.yml'
-  credentials-manager: 'credentials-manager/taskfile.yml'
-  connector: 'edc-connector/taskfile.yml'
-  cde: 'cde/taskfile.yml'
-  
+  wallet: "wallet/taskfile.yml"
+  did-server: "did-server/taskfile.yml"
+  proxy: "reverse-proxy/taskfile.yml"
+  credentials-manager: "credentials-manager/taskfile.yml"
+  connector: "edc-connector/taskfile.yml"
+  cde: "cde/taskfile.yml"
 
 tasks:
-
   start-all:
     cmds:
       - task: generate-certs
@@ -37,7 +36,6 @@ tasks:
       - task connector:stop
       - task wallet:stop
       - task did-server:stop
-      
 
   config-all:
     cmds:
@@ -46,30 +44,29 @@ tasks:
       - task wallet:config
       - task connector:config
 
-
   generate-certs:
     silent: true
-    dir: '{{.CERT_FOLDER}}'
+    dir: "{{.CERT_FOLDER}}"
     postconditions:
       - test -f {{.DID_WEB_DOMAIN}}.key
       - test -f {{.DID_WEB_DOMAIN}}.crt
-      - test -f cert.pfx #used by the connector
-      - test -f vault.properties #used by the connector
+      - test -f cert.pfx
+      - test -f vault.properties
     env:
       USE_LETSENCRYPT: true
-      OUT_DIR: '.'
+      OUT_DIR: "."
     cmds:
       - |
         if [ "$USE_LETSENCRYPT" = "true" ]; then
           task import-certs
-        fi       
+        fi
       - bash {{.SCRIPTS_FOLDER}}/prepare-certs.sh
-  
+
   import-certs:
     silent: true
-    dir: '{{.CERT_FOLDER}}'
+    dir: "{{.CERT_FOLDER}}"
     vars:
-      PARTICIPANT_X5U: '{{.CREDENTIALS_FOLDER}}/.well-known/x5u.pem'
+      PARTICIPANT_X5U: "{{.CREDENTIALS_FOLDER}}/.well-known/x5u.pem"
     postconditions:
       - test -f {{.DID_WEB_DOMAIN}}.key
       - test -f {{.DID_WEB_DOMAIN}}.crt
@@ -84,9 +81,9 @@ tasks:
 
   create-legalparticipant:
     desc: "Create Legal Participant"
-    silent: true  
+    silent: true
     cmds:
-      - | 
+      - |
         read -p "Do you want to create a legal participant? (yes/no) [no]: " create_legal_participant
         create_legal_participant=${create_legal_participant:-no}
 

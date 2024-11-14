@@ -1,124 +1,81 @@
-#-------------------------------------------------------------------
-# authors     [ Radhouene AZZABI ]
-# contacts    [ azzabi.radhouene@cea.fr ]
-# created     2024/10-15T12:12:24
-# modified    2024/10-15T12:12:24
-# version     1.0.0
-#-------------------------------------------------------------------
-
 version: "3"
 
-#dotenv: ['../.env'] # uncomment if you want to test tasks localy
+vars:
+  EXAMPLES_IMAGE: datacellar-connector-examples
+  LOCAL_PROTOCOL_URL: "https://{{.PARTICIPANT_NAME}}.{{.DOMAIN_NAME}}/protocol"
+  EDC_CONNECTOR_SCHEME: "http"
+  EDC_CONNECTOR_HOST: "{{.PARTICIPANT_NAME}}.{{.DOMAIN_NAME}}"
+  EDC_CONNECTOR_CONNECTOR_ID: "{{.PARTICIPANT_NAME}}"
+  EDC_CONNECTOR_PARTICIPANT_ID: "{{.PARTICIPANT_NAME}}"
+  EDC_CONNECTOR_MANAGEMENT_PORT: 80
+  EDC_CONNECTOR_CONTROL_PORT: 80
+  EDC_CONNECTOR_PUBLIC_PORT: 80
+  EDC_CONNECTOR_PROTOCOL_PORT: 80
 
-tasks: 
+tasks:
+  config:
+    desc: "Replace the environment variables in the connector properties file template"
+    cmds:
+      - >
+        envsubst
+        < {{.TASKFILE_DIR}}/config/connector.properties.tmpl
+        > {{.TASKFILE_DIR}}/config/connector.properties
+      # Remove lines where property value is empty
+      - sed -i '/=$/d' {{.TASKFILE_DIR}}/config/connector.properties
 
   start:
-    desc: "Start Connector"
-    silent: true
-    dir: '{{.EDC_CONNECTOR_FOLDER}}'
-    cmds: 
-      - |
-        read -p "Do you want to start Connector ? (yes/no) [no]: " start_connector
-        start_connector=${start_connector:-no}
+    desc: "Start the connector stack"
+    deps:
+      - config
+    cmds:
+      - docker compose -f {{.TASKFILE_DIR}}/docker-compose.yml up -d --wait
 
-        if [ "$start_connector" = "yes" ]; then
-
-          read -p "Start connector? (consumer/provider) [consumer]: " connector_type
-          connector_type=${connector_type:-consumer} 
-
-          if [ "$connector_type" = "consumer" ]; then
-            task start-consumer
-          elif [ "$connector_type" = "provider" ]; then
-            task start-provider
-          else
-            echo "Invalid connector type. Please enter 'consumer' or 'provider'."
-            task start
-          fi
-
-        fi
-  
   stop:
-    desc: "Stop Connector"
-    dir: '{{.EDC_CONNECTOR_FOLDER}}'
+    desc: "Stop the connector stack"
     cmds:
-        - docker compose -p {{.PARTICIPANT_NAME}} down
-  
-  config:
-    desc: "Config Connector"
-    dir: '{{.EDC_CONNECTOR_FOLDER}}'
-    cmds:
-        - envsubst < ./config/connector.properties.tmpl > ./config/connector.properties
+      - docker compose -f {{.TASKFILE_DIR}}/docker-compose.yml down
 
-  start-consumer:
-    desc: "Start Connector Consumer"
+  build-example-image:
+    desc: "Build the container image to run the connector examples"
+    dir: "{{.TASKFILE_DIR}}/examples"
+    cmds:
+      - >
+        docker build
+        --build-arg EDC_CONNECTOR_SCHEME={{.EDC_CONNECTOR_SCHEME}}
+        --build-arg EDC_CONNECTOR_HOST={{.EDC_CONNECTOR_HOST}}
+        --build-arg EDC_CONNECTOR_CONNECTOR_ID={{.EDC_CONNECTOR_CONNECTOR_ID}}
+        --build-arg EDC_CONNECTOR_PARTICIPANT_ID={{.EDC_CONNECTOR_PARTICIPANT_ID}}
+        --build-arg EDC_CONNECTOR_MANAGEMENT_PORT={{.EDC_CONNECTOR_MANAGEMENT_PORT}}
+        --build-arg EDC_CONNECTOR_CONTROL_PORT={{.EDC_CONNECTOR_CONTROL_PORT}}
+        --build-arg EDC_CONNECTOR_PUBLIC_PORT={{.EDC_CONNECTOR_PUBLIC_PORT}}
+        --build-arg EDC_CONNECTOR_PROTOCOL_PORT={{.EDC_CONNECTOR_PROTOCOL_PORT}}
+        --build-arg EDC_CONNECTOR_API_KEY={{.EDC_CONNECTOR_API_KEY}}
+        --build-arg EDC_CONNECTOR_API_KEY_HEADER={{.EDC_CONNECTOR_API_KEY_HEADER}}
+        -t {{.EXAMPLES_IMAGE}} .
+
+  test-catalogue:
+    desc: "Run an example that connects to the local connector to fetch its catalogue"
     deps:
-      - config
-    dir: '{{.EDC_CONNECTOR_FOLDER}}'
+      - build-example-image
     cmds:
-      - sed -i '/^eu\.datacellar\.openapi\.url/ s/^/#/' ./config/connector.properties
-      - docker compose -p {{.PARTICIPANT_NAME}} up -d broker backend example --wait
-      - docker compose -p {{.PARTICIPANT_NAME}} up connector
+      - >
+        docker run
+        --rm --network host
+        -e COUNTER_PARTY_PROTOCOL_URL={{.LOCAL_PROTOCOL_URL}}
+        {{.EXAMPLES_IMAGE}}
+        python3 /opt/examples/catalogue.py
 
-  start-provider:
-    silent: true
+  test-catalogue-remote:
+    desc: "Run an example that connects to a remote connector to fetch its catalogue"
     deps:
-      - config
-    desc: "Start Connector Provider"
-    dir: '{{.EDC_CONNECTOR_FOLDER}}'
+      - build-example-image
+    requires:
+      vars:
+        - REMOTE_PROTOCOL_URL
     cmds:
-      - |
-       
-        read -p "Set open-api spec (http://${PARTICIPANT_NAME}.mock-api:9090/openapi.json): " openapi_url
-        openapi_url=${openapi_url:-http://${PARTICIPANT_NAME}.mock-api:9090/openapi.json} 
-
-        
-        if [ "$openapi_url" = "http://${PARTICIPANT_NAME}.mock-api:9090/openapi.json" ]; then
-          echo "Starting mock API..."
-          docker compose -p {{.PARTICIPANT_NAME}} up -d mock-api --wait
-        else
-          echo "Replacing OpenAPI URL in connector.properties..."
-          sed -i 's|eu.datacellar.openapi.url=http://'"${PARTICIPANT_NAME}"'.mock-api:9090/openapi.json|eu.datacellar.openapi.url='"${openapi_url}"'|' ./config/connector.properties
-        fi
-
-        echo "Starting the connector..."
-        docker compose -p {{.PARTICIPANT_NAME}} up connector
-
-
-
-  run-examples:
-    silent: true
-    desc: Runs the Consumer Pull/Push example script from the consumer
-    # deps:
-    #   - start-consumer
-    dir: '{{.EDC_CONNECTOR_FOLDER}}'
-    cmds:
-      - |
-       
-        read -p "Run examples (pull/push/catalogue) [catalogue]: " consumer_example
-        consumer_example=${consumer_example:-catalogue} 
-
-        read -p "Set counter_party_connector_id (provider): " counter_party_connector_id
-        counter_party_connector_id=${counter_party_connector_id:-provider} 
-
-        read -p "Set COUNTER_PARTY_PROTOCOL_URL (https://$counter_party_connector_id.datacellar.cosypoc.ovh/protocol): " counter_party
-        counter_party=${counter_party:-https://$counter_party_connector_id.datacellar.cosypoc.ovh/protocol} 
-
-        export COUNTER_PARTY_PROTOCOL_URL=$counter_party
-        export COUNTER_PARTY_CONNECTOR_ID=$counter_party_connector_id
-        
-
-        if [ "$consumer_example" = "pull" ]; then
-          docker exec -it {{.PARTICIPANT_NAME}}.connector-example \
-          bash -c "COUNTER_PARTY_PROTOCOL_URL=$counter_party COUNTER_PARTY_CONNECTOR_ID=$counter_party_connector_id python3 /opt/src/example/example_pull.py"
-        fi
-        
-        if [ "$consumer_example" = "push" ]; then
-          docker exec -it {{.PARTICIPANT_NAME}}.connector-example \
-          bash -c "COUNTER_PARTY_PROTOCOL_URL=$counter_party COUNTER_PARTY_CONNECTOR_ID=$counter_party_connector_id python3 /opt/src/example/example_push.py"
-        fi
-
-        if [ "$consumer_example" = "catalogue" ]; then
-          docker exec -it {{.PARTICIPANT_NAME}}.connector-example \
-          bash -c "COUNTER_PARTY_PROTOCOL_URL=$counter_party python3 /opt/src/example/example_catalogue.py"
-        fi
-
+      - >
+        docker run
+        --rm --network host
+        -e COUNTER_PARTY_PROTOCOL_URL={{.REMOTE_PROTOCOL_URL}}
+        {{.EXAMPLES_IMAGE}}
+        python3 /opt/examples/catalogue.py

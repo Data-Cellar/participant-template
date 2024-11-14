@@ -1,7 +1,3 @@
-"""
-This example shows how the Consumer can list the assets available in the Provider's catalogue.
-"""
-
 import asyncio
 import logging
 import os
@@ -20,9 +16,12 @@ _logger = logging.getLogger(__name__)
 async def main():
     """List the assets available in the Provider's catalogue."""
 
-    counter_party_protocol_url: str = os.getenv(
-        _ENV_COUNTER_PARTY_PROTOCOL_URL, "http://provider.local:9194/protocol"
-    )
+    counter_party_protocol_url: str = os.getenv(_ENV_COUNTER_PARTY_PROTOCOL_URL)
+
+    if not counter_party_protocol_url:
+        raise ValueError(
+            f"Environment variable {_ENV_COUNTER_PARTY_PROTOCOL_URL} is not set"
+        )
 
     controller = ConnectorController()
     _logger.debug("Configuration:\n%s", controller.config)

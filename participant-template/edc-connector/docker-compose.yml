@@ -1,40 +1,42 @@
-
 services:
-
   connector:
     image: ${EDC_CONNECTOR_IMG}:${EDC_CONNECTOR_IMG_VERSION}
     container_name: ${PARTICIPANT_NAME}.connector
-    build: .
-    pull_policy: never
     restart: on-failure
     environment:
-      PROPERTIES_FILE_PATH: /opt/src/config/connector.properties
-      KEYSTORE_PATH: /opt/src/config/certs/cert.pfx
-      KEYSTORE_PASSWORD: datacellar
+      PROPERTIES_FILE_PATH: /etc/connector/connector.properties
+      KEYSTORE_PATH: /etc/connector/certs/cert.pfx
+      KEYSTORE_PASSWORD: ${KEY_PASSW}
+      API_AUTH_KEY: ${EDC_CONNECTOR_API_KEY}
     volumes:
-      - .:/opt/src
-      - ${CERT_FOLDER}:/opt/src/config/certs
+      - ./config/connector.properties:/etc/connector/connector.properties
+      - ${CERT_FOLDER}:/etc/connector/certs
+    depends_on:
+      postgres:
+        condition: service_healthy
+      broker:
+        condition: service_healthy
     networks:
       - datacellar
 
   backend:
     image: ${EDC_CONNECTOR_IMG}:${EDC_CONNECTOR_IMG_VERSION}
-    container_name: ${PARTICIPANT_NAME}.backend
-    build: .
+    container_name: ${PARTICIPANT_NAME}.connector-backend
     restart: on-failure
     volumes:
-      - .:/opt/src
-      - ${CERT_FOLDER}:/opt/src/config/certs
+      - ${CERT_FOLDER}:/etc/connector/certs
     environment:
-      # The public key of the provider is needed to verify the signature of the JWT
-      EDC_CERT_PATH: /opt/src/config/certs/${PARTICIPANT_CERT}
-      EDC_RABBIT_URL: amqp://${RABBITMQ_DEFAULT_PASS}:${RABBITMQ_DEFAULT_PASS}@${PARTICIPANT_NAME}.connector-broker:5672
-      EDC_HTTP_API_PORT: 28000
+      EDC_CERT_PATH: /etc/connector/certs/${PARTICIPANT_CERT}
+      EDC_RABBIT_URL: amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@${PARTICIPANT_NAME}.connector-broker:5672
+      EDC_HTTP_API_PORT: ${EDC_BACKEND_PORT}
     # ports:
-    #   - 28000:${EDC_HTTP_API_PORT}
+    #   - 28000:28000
     command: [run-http-backend]
     depends_on:
-      - broker
+      postgres:
+        condition: service_healthy
+      broker:
+        condition: service_healthy
     networks:
       - datacellar
 
@@ -46,28 +48,20 @@ services:
     #   - 5672:5672
     #   - 15672:15672
     environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_PASS}
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER}
       RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS}
     networks:
       - datacellar
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
 
-  mock-api:
-    image: ${EDC_CONNECTOR_IMG}-mock-api:${EDC_CONNECTOR_IMG_VERSION}
-    build: ./mock-api
-    container_name: ${PARTICIPANT_NAME}.mock-api
-    pull_policy: never
-    command: ["uvicorn", "http-api:app", "--host", "0.0.0.0", "--port", "9090"]
-    restart: on-failure
-    environment:
-      ENABLE_PRESENTATION_DEFINITION: ${ENABLE_PRESENTATION_DEFINITION:-}
-    # ports:
-    #   - "9090:9090"
-    networks:
-      - datacellar
-    
   postgres:
     image: postgres:14
-    container_name: ${PARTICIPANT_NAME}.postgres
+    container_name: ${PARTICIPANT_NAME}.connector-postgres
     restart: on-failure
     # ports:
     #   - 15432:5432
@@ -85,41 +79,10 @@ services:
       retries: 3
       start_period: 30s
 
-  example:
-    image: ${EDC_CONNECTOR_IMG}:${EDC_CONNECTOR_IMG_VERSION}
-    container_name: ${PARTICIPANT_NAME}.connector-example
-    build: .
-    restart: on-failure
-    volumes:
-      - .:/opt/src
-      - ${CERT_FOLDER}:/opt/src/config/certs
-    environment:
-      EDC_CERT_PATH: /opt/src/config/certs/${PARTICIPANT_CERT}
-      EDC_CONNECTOR_HOST: ${PARTICIPANT_NAME}.connector
-      EDC_CONNECTOR_CONNECTOR_ID: ${PARTICIPANT_NAME}
-      EDC_CONNECTOR_PARTICIPANT_ID: ${PARTICIPANT_NAME}
-      EDC_CONNECTOR_MANAGEMENT_PORT: ${EDC_CONNECTOR_MANAGEMENT_PORT}
-      EDC_CONNECTOR_CONTROL_PORT: ${EDC_CONNECTOR_CONTROL_PORT}
-      EDC_CONNECTOR_PUBLIC_PORT: ${EDC_CONNECTOR_PUBLIC_PORT}
-      EDC_CONNECTOR_PROTOCOL_PORT: ${EDC_CONNECTOR_PROTOCOL_PORT}
-      EDC_RABBIT_URL: amqp://${RABBITMQ_DEFAULT_PASS}:${RABBITMQ_DEFAULT_PASS}@${PARTICIPANT_NAME}.connector-broker:5672
-      CONSUMER_BACKEND_BASE_URL: "${PARTICIPANT_NAME}.backend:28000"
-      COUNTER_PARTY_PROTOCOLE_URL: ${COUNTER_PARTY_PROTOCOLE_URL:-https://provider.datacellar.cosypoc.ovh}
-      COUNTER_PARTY_CONNECTOR_ID: ${COUNTER_PARTY_CONNECTOR_ID:-provider}
-    networks:
-      - datacellar
-    entrypoint: sh -c "sleep infinity"
-
 volumes:
   postgres_data: {}
 
 networks:
   datacellar:
-    driver: bridge
+    external: true
     name: datacellar_network
-    ipam:
-     config:
-       - subnet: 192.168.0.0/24
-         gateway: 192.168.0.1
-    driver_opts:
-      com.docker.network.bridge.name: br_datacellar

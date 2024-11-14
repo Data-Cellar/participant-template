@@ -1,7 +1,4 @@
-version: '3.9'
-
 services:
-
   caddy:
     image: caddy:2.7
     container_name: datacellar.caddy
@@ -9,7 +6,7 @@ services:
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile
       - ./caddy/config.d:/etc/caddy/config.d
-      - caddy_data:/data  
+      - caddy_data:/data
       - caddy_config:/config
       - ./caddy/certs:/data/caddy/certificates/acme-v02.api.letsencrypt.org-directory
     cap_add:
@@ -28,11 +25,5 @@ volumes:
 
 networks:
   datacellar:
-    driver: bridge
+    external: true
     name: datacellar_network
-    ipam:
-     config:
-       - subnet: 192.168.0.0/24
-         gateway: 192.168.0.1
-    driver_opts:
-      com.docker.network.bridge.name: br_datacellar

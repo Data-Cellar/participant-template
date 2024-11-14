@@ -1,21 +1,19 @@
-version: '3.9'
-
 services:
-
   caddy:
     image: caddy:2.7
     container_name: datacellar.caddy
     restart: always
     volumes:
       - ./caddy/Caddyfile:/etc/caddy/Caddyfile
-      - ./caddy/config.d:/etc/caddy/config.d
-      - caddy_data:/data  
+      - ./caddy/conf.d:/etc/caddy/conf.d
+      - caddy_data:/data
       - caddy_config:/config
-      - ./caddy/certs:/data/caddy/certificates/acme-v02.api.letsencrypt.org-directory
+      - ./caddy/certs:/data/caddy/certificates/${CADDY_CERTS_DIR}
     cap_add:
       - NET_ADMIN
     environment:
       CADDY_DEBUG: 1
+      CADDY_ACME_CA: ${CADDY_ACME_CA:-https://acme-v02.api.letsencrypt.org/directory}
     ports:
       - 80:80
       - 443:443
@@ -28,11 +26,5 @@ volumes:
 
 networks:
   datacellar:
-    driver: bridge
+    external: true
     name: datacellar_network
-    ipam:
-     config:
-       - subnet: 192.168.0.0/24
-         gateway: 192.168.0.1
-    driver_opts:
-      com.docker.network.bridge.name: br_datacellar

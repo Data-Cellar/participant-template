@@ -1,1 +1,3 @@
 participants/*
+reverse-proxy/caddy/certs/*
+reverse-proxy/caddy/conf.d/*.caddy

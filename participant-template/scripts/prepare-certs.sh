@@ -1,8 +1,5 @@
 #!/usr/bin/env bash
 
-# This Bash script generates a self-signed SSL/TLS certificate and converts it into a PKCS12 format. 
-# The script uses OpenSSL to create the certificate and private key files, saving them in the specified ${OUT_DIR} directory. 
-
 set -e
 set -x
 
@@ -36,11 +33,3 @@ openssl x509 -pubkey \
     -in ${OUT_DIR}/${PARTICIPANT_CERT} \
     --noout \
     -out ${OUT_DIR}/pubkey.pem
-
-echo "publickey=$(cat ${OUT_DIR}/${PARTICIPANT_KEY})" > \
-    ${OUT_DIR}/vault.properties.temp
-
-sed -e ':a' -e 'N' -e '$!ba' -e 's/\n/\\r\\n/g' ${OUT_DIR}/vault.properties.temp > \
-    ${OUT_DIR}/vault.properties
-
-rm ${OUT_DIR}/vault.properties.temp
