@@ -67,6 +67,12 @@ sequenceDiagram
     ISS->>PWALL: Issues Legal Participant VCs
 ```
 
+The **web page of the onboarding portal** is available at:
+
+https://idp.datacellar.cosypoc.ovh
+
+However, please note that the onboarding portal is a work in progress. If you encounter any issues, or if the portal is unavailable, please contact the Data Cellar team.
+
 ## User Guide
 
 ### Start the Proxy and Initialize a Participant
