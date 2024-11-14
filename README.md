@@ -13,6 +13,7 @@
   - [Other Tasks and Notes](#other-tasks-and-notes)
     - [Access to the Credentials Manager API](#access-to-the-credentials-manager-api)
     - [Register a Legal Participant in the Global Catalogue](#register-a-legal-participant-in-the-global-catalogue)
+  - [Next Steps](#next-steps)
   - [License](#license)
 
 This repository contains all the essential components needed to set up a Data Cellar participant. It includes a web server for hosting verifiable credentials, a participant wallet, the Data Cellar data space connector (based on the EDC connector codebase), and the Data Cellar CDE.
@@ -94,6 +95,7 @@ During setup, you'll need to provide several configuration details. The followin
 - The **Issuer API key** - A secret key given to you during onboarding that allows your participant to authenticate with Data Cellar's identity services and obtain verifiable credentials for data space access.
 - The **Issuer DID** - The Decentralized Identifier of Data Cellar's central issuer, which acts as the trust anchor and issues verifiable credentials for all participants.
 - The **Data Cellar API URLs** - The endpoints your participant will use to interact with Data Cellar's identity services.
+- The **OpenAPI specification URL** - The URL to the OpenAPI specification that describes the HTTP API that your connector *provides* to the data space.
 
 Unless you have a specific reason to change them, leave the default values as they are. For example, while the script offers the flexibility to modify the API URLs of the Data Cellar services, you will most likely want to keep the default URLs that connect to the production Data Cellar services.
 
@@ -236,6 +238,19 @@ VP Legal Participant (url or id): https://consumer.datacellar.cosypoc.ovh/vp/bc6
 2024-10-23 15:01:18.957 | INFO     | __main__:<module>:86 - [LEGAL_PARTICIPANT_ID] -> https://consumer.datacellar.cosypoc.ovh/vp/bc6ca012-e5bd-46a2-99a0-76edfef0c105.json
 2024-10-23 15:01:22.268 | INFO     | __main__:<module>:91 - {'status': 'success', 'message': 'All credentials verified successfully', 'details': 'registration legalParticipant into the catalogue is under-construction'}
 ```
+
+## Next Steps
+
+After the deployment, you'll have all the services required to operate in the Data Cellar data space. This means that, among other services, you'll have access to a data space connector based on the [Eclipse Dataspace Components (EDC) Connector](https://github.com/eclipse-edc/Connector) framework. You can check the specific launcher and extensions used in this connector in the [fundacionctic/connector-building-blocks](https://github.com/fundacionctic/connector-building-blocks) repository.
+
+> [!NOTE]
+> Data Cellar has developed bespoke extensions on top of the EDC Connector framework to support the specific needs of the Data Cellar data space. These extensions are necessary for an EDC connector to interoperate with the Data Cellar infrastructure.
+
+If you have defined the URL to the OpenAPI specification of the HTTP API that is exposed by your connector to the data space (i.e., variable `EDC_CONNECTOR_OPENAPI_URL` in the `.env` file of a participant), and you do not want to consume any data from the data space, you are essentially finished. At this point, your datasets should eventually be available in the data space.
+
+If you wish to consume data from the data space, you will need to interact with the APIs of your connector to communicate with other connectors in the data space, as illustrated in the [eclipse-edc/Samples](https://github.com/eclipse-edc/Samples) repository.
+
+To help ease the learning curve, Data Cellar has developed a small Python package named `edcpy` that wraps the logic to interact with the APIs of your connector. You can find it [published on PyPI](https://pypi.org/project/edcpy/). The source code is [available here](https://github.com/fundacionctic/connector-building-blocks/tree/main/edcpy), and [this link](https://github.com/fundacionctic/connector-building-blocks/tree/main/example) provides examples of how to use it.
 
 ## License
 
