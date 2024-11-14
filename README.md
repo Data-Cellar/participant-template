@@ -38,8 +38,7 @@ To deploy a participant, you need to have the following prerequisites:
 > [!IMPORTANT]
 > Your DNS must be configured for both the domain name and the subdomain that includes the participant name. For example, if your DNS domain is `datacellar.cosypoc.ovh` and your participant name is `consumer`, your DNS must be configured for both `datacellar.cosypoc.ovh` and `consumer.datacellar.cosypoc.ovh`.
 
-> [!TIP]
-> There are scripts for your convenience in the `install` directory to help you install these prerequisites. In any case, it is recommended that you follow the official documentation for these tools.
+There are scripts for your convenience in the `install` directory to help you install these prerequisites. In any case, it is recommended that you follow the official documentation for these tools.
 
 ### Obtain an API Key
 
@@ -96,8 +95,7 @@ During setup, you'll need to provide several configuration details. The followin
 - The **Issuer DID** - The Decentralized Identifier of Data Cellar's central issuer, which acts as the trust anchor and issues verifiable credentials for all participants.
 - The **Data Cellar API URLs** - The endpoints your participant will use to interact with Data Cellar's identity services.
 
-> [!NOTE]
-> If not mentioned otherwise, leave the default values unless you have a specific reason to change them.
+Unless you have a specific reason to change them, leave the default values as they are. For example, while the script offers the flexibility to modify the API URLs of the Data Cellar services, you will most likely want to keep the default URLs that connect to the production Data Cellar services.
 
 > [!NOTE]
 > If a participant folder already exists, the script will stop all services and delete the folder before creating a new one. Ensure that the folder and proxy paths you provide are correct and accessible.
@@ -108,7 +106,10 @@ After running the setup task, a new participant directory will be created under 
 
 #### Customize the Configuration
 
-The participant's configuration is stored in a `.env` file located at `deploy/participants/<participant-name>/.env`. You **should** review and customize the configuration values in this file to improve security and fit your needs.
+The participant's configuration is stored in a `.env` file located at `deploy/participants/<participant-name>/.env`.
+
+> [!WARNING]      
+> You **should** review and customize some of the configuration values in this file to improve security and fit your needs. Otherwise, you'll be using the default credentials for some services, which poses a significant security risk.
 
 The following table describes the most important environment variables you may want to customize:
 
@@ -217,10 +218,9 @@ task credentials-manager:register-legalparticipant-catalogue
 
 You will be prompted to enter the ID or URL of the Legal Participant's Verifiable Presentation (VP), which was generated during the participant deployment process.
 
-> [!NOTE]
-> The catalogue registration request is sent to the Data Cellar Identity Provider, which handles the registration in the catalogue. This process was designed this way for legal and authorization reasons. The Data Cellar administrator must approve the registration of a new participant in the catalogue.
+The catalogue registration request is sent to the Data Cellar Identity Provider, which handles the registration in the catalogue. This process was designed this way for governance and authorization reasons. The Data Cellar administrator must approve the registration of a new participant in the catalogue.
 
-> [!WARNING]
+> [!NOTE]
 > This feature has been implemented but is not fully connected to the global catalogue, as it is not currently deployed.
 
 For example:
