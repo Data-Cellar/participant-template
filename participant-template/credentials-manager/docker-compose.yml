@@ -1,18 +1,17 @@
 services:
   credentials-api:
-    image: datacellar/credentials-api:${CREDENTIALS_API_IMAGE_VERSION}
-    build: ./api
+    image: docker.io/agmangas/datacellar-cli:v0.3.1
     container_name: ${PARTICIPANT_NAME}.credentials-api
     restart: unless-stopped
+    command: datacellar serve-api --port 8080
     volumes:
-      - ./api/app:/app
       - ${CREDENTIALS_FOLDER}:/credentials
       - ${CERT_FOLDER}:/certs
       - ${WALLET_FOLDER}/waltid/data:/waltid
     # ports:
     #   - 8080:8080
     environment:
-      CREDENTIALS_MANAGER_API: "http://credentials-api/api/v1"
+      CREDENTIALS_MANAGER_API: "http://credentials-api:8080/api/v1"
       DATACELLAR_API_BASE_URL: ${DATACELLAR_API_BASE_URL}
       WALLET_API_BASE_URL: ${WALLET_API_BASE_URL}
       WALLET_USER_NAME: ${WALLET_USER_NAME}
@@ -22,31 +21,6 @@ services:
       ISSUER_API_KEY: ${ISSUER_API_KEY}
     networks:
       - datacellar
-    entrypoint: sh -c "pm2 start main.py --name api --interpreter python3 && pm2 logs api"
-
-  provision-wallet:
-    image: datacellar/credentials-api:${CREDENTIALS_API_IMAGE_VERSION}
-    container_name: ${PARTICIPANT_NAME}.provision-wallet
-    depends_on:
-      - credentials-api
-    volumes:
-      - ./api/app:/app
-      - ${CREDENTIALS_FOLDER}:/credentials
-      - ${CERT_FOLDER}:/certs
-      - ${WALLET_FOLDER}/data:/waltid
-    environment:
-      CREDENTIALS_MANAGER_API: "http://credentials-api:8080/api/v1"
-      WALLET_API_BASE_URL: ${WALLET_API_BASE_URL}
-      WALLET_USER_NAME: ${WALLET_USER_NAME}
-      WALLET_USER_EMAIL: ${WALLET_USER_EMAIL}
-      WALLET_USER_PASSWORD: ${WALLET_USER_PASSWORD}
-      DID_WEB_DOMAIN: ${DID_WEB_DOMAIN}
-      PARTICIPANT_LEGAL_NAME: ${PARTICIPANT_LEGAL_NAME:-CEA}
-      PARTICIPANT_VAT_ID: ${PARTICIPANT_VAT_ID:-FR43775685019}
-      PARTICIPANT_COUNTRY_SUBDIVISION_CODE: ${PARTICIPANT_COUNTRY_SUBDIVISION_CODE:-FR-OCC}
-    networks:
-      - datacellar
-    command: sh -c "python3 provision_wallet.py"
 
 networks:
   datacellar:

@@ -1,3 +1,4 @@
+---
 #-------------------------------------------------------------------
 # authors     [ Radhouene AZZABI ]
 # contacts    [ azzabi.radhouene@cea.fr ]
@@ -8,79 +9,71 @@
 
 version: "3"
 
-
 #dotenv: ['../.env'] # uncomment if you want to test tasks localy
 
 tasks:
-  
-  # Credentials Manager API
   start-api:
     desc: "Start Credentials Manager API"
-    dir: '{{.CREDENTIALS_MANAGER_FOLDER}}'
+    dir: "{{.CREDENTIALS_MANAGER_FOLDER}}"
     preconditions:
       - test -f docker-compose.yml
     cmds:
       - docker compose -p {{.PARTICIPANT_NAME}} up credentials-api --wait
-     
+
   stop-api:
     desc: "Stop Credentials Manager"
-    dir: '{{.CREDENTIALS_MANAGER_FOLDER}}'
+    dir: "{{.CREDENTIALS_MANAGER_FOLDER}}"
     preconditions:
       - test docker-compose.yml
     cmds:
       - docker compose -p {{.PARTICIPANT_NAME}} stop credentials-api
-  
+
   provision-wallet:
     silent: true
     desc: "Provision Wallet"
     deps:
       - start-api
-    dir: '{{.CREDENTIALS_MANAGER_FOLDER}}'
+    dir: "{{.CREDENTIALS_MANAGER_FOLDER}}"
     preconditions:
       - test -f docker-compose.yml
       - test -f {{.CERT_FOLDER}}/{{.DID_WEB_DOMAIN}}.key
       - test -f {{.CERT_FOLDER}}/{{.DID_WEB_DOMAIN}}.crt
     cmds:
-      - |
-        echo "Provision Wallet"
-        docker exec -it {{.PARTICIPANT_NAME}}.credentials-api \
-          bash -c "python3 provision_wallet.py"
+      - echo "Provisioning participant {{.PARTICIPANT_NAME}} wallet"
+      - >
+        docker exec -it {{.PARTICIPANT_NAME}}.credentials-api
+        datacellar provision-wallet
 
   create-legalparticipant:
-    desc: 'Create a legal participant with provided legalname, vatid, and country_subdivision_code'
+    silent: true
+    desc: "Create a legal participant with the provided legal name, VAT ID, and country subdivision code"
     deps:
       - start-api
-    silent: true 
-    dir: '{{.CREDENTIALS_MANAGER_FOLDER}}'
+    dir: "{{.CREDENTIALS_MANAGER_FOLDER}}"
     cmds:
-      - |
-        read -p "Enter legalName (CEA): " legalname
-        legalname=${legalname:-CEA}  
-        read -p "Enter VAT ID (FR43775685019): " vatid
-        vatid=${vatid:-FR43775685019}  # Default to "FR43775685019" if no input
-        read -p "Enter subdivision (FR-OCC): " subdivision
-        subdivision=${subdivision:-FR-OCC}  # Default to "FR-OCC" if no input
-        echo "Creating legal participant: legalName=$legalname, vatID=$vatid, CountrySubdivisionCode=$subdivision"
-        docker exec -it {{.PARTICIPANT_NAME}}.credentials-api \
-          bash -c "\
-          PARTICIPANT_LEGAL_NAME=$legalname \
-          PARTICIPANT_VAT_ID=$vatid \
-          PARTICIPANT_COUNTRY_SUBDIVISION_CODE=$subdivision \
-          python3 create_legal_participant.py"
+      - >
+        read -p "Enter legal name (CEA): " legalname &&
+        legalname=${legalname:-CEA} &&
+        read -p "Enter VAT ID (FR43775685019): " vatid &&
+        vatid=${vatid:-FR43775685019} &&
+        read -p "Enter country subdivision code (FR-OCC): " subdivision &&
+        subdivision=${subdivision:-FR-OCC} &&
+        echo "Creating legal participant: legalName=$legalname, vatID=$vatid, CountrySubdivisionCode=$subdivision" &&
+        docker exec -it {{.PARTICIPANT_NAME}}.credentials-api
+        datacellar create-legal-participant --participant-legal-name=$legalname --participant-vat-id=$vatid --participant-country-subdivision-code=$subdivision
 
-  register-legalparticipant-catalogue:
-    desc: 'Register a legal participant to the global catalogue'
-    deps:
-      - start-api
-    silent: true 
-    dir: '{{.CREDENTIALS_MANAGER_FOLDER}}'
-    cmds:
-      - |
-        read -p "VP Legal Participant (url or id): " legalparticipant_id
-        legalparticipant_id=${legalparticipant_id:-}  
-        
-        docker exec -it {{.PARTICIPANT_NAME}}.credentials-api \
-          bash -c "\
-          LEGAL_PARTICIPANT_ID=$legalparticipant_id \
-          python3 register_participant_to_catalogue.py"
-  
+  # register-legalparticipant-catalogue:
+  #   desc: "Register a legal participant to the global catalogue"
+  #   deps:
+  #     - start-api
+  #   silent: true
+  #   dir: "{{.CREDENTIALS_MANAGER_FOLDER}}"
+  #   cmds:
+  #     - |
+  #       read -p "VP Legal Participant (url or id): " legalparticipant_id
+  #       legalparticipant_id=${legalparticipant_id:-}
+
+  #       docker exec -it {{.PARTICIPANT_NAME}}.credentials-api \
+  #         bash -c "\
+  #         LEGAL_PARTICIPANT_ID=$legalparticipant_id \
+  #         python3 register_participant_to_catalogue.py"
