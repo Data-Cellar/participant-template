@@ -12,7 +12,7 @@ vars:
   EDC_CONNECTOR_PUBLIC_PORT: 80
   EDC_CONNECTOR_PROTOCOL_PORT: 80
   TASKFILE_DIR: "{{.EDC_CONNECTOR_FOLDER}}"
-  
+
 tasks:
   config:
     desc: "Replace the environment variables in the connector properties file template"
@@ -29,12 +29,12 @@ tasks:
     deps:
       - config
     cmds:
-      - docker compose -f {{.TASKFILE_DIR}}/docker-compose.yml up -d --wait
+      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml up -d --wait
 
   stop:
     desc: "Stop the connector stack"
     cmds:
-      - docker compose -f {{.TASKFILE_DIR}}/docker-compose.yml down
+      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml down
 
   build-example-image:
     desc: "Build the container image to run the connector examples"
