@@ -261,7 +261,7 @@ To help ease the learning curve, Data Cellar has developed a small Python packag
 
 ### Testing Against the Public Test Connector
 
-There is a public test connector available at `ctic.dcserver.cticpoc.com` that you can use to test your participant against.
+There is a public test connector available at [`ctic.dcserver.cticpoc.com`](https://ctic.dcserver.cticpoc.com/api/v1/docs) that you can use to test your participant against.
 
 More specifically, there is a task `connector:test-catalogue-remote` that fetches the catalogue from a remote connector and prints it to the console. This can be useful to verify that:
 
