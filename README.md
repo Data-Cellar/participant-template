@@ -14,6 +14,7 @@
     - [Access to the Credentials Manager API](#access-to-the-credentials-manager-api)
     - [Register a Legal Participant in the Global Catalogue](#register-a-legal-participant-in-the-global-catalogue)
   - [Next Steps](#next-steps)
+    - [Testing Against the Public Test Connector](#testing-against-the-public-test-connector)
   - [License](#license)
 
 This repository contains all the essential components needed to set up a Data Cellar participant. It includes a web server for hosting verifiable credentials, a participant wallet, the Data Cellar data space connector (based on the EDC connector codebase), and the Data Cellar CDE.
@@ -257,6 +258,28 @@ If you have defined the URL to the OpenAPI specification of the HTTP API that is
 If you wish to consume data from the data space, you will need to interact with the APIs of your connector to communicate with other connectors in the data space, as illustrated in the [eclipse-edc/Samples](https://github.com/eclipse-edc/Samples) repository.
 
 To help ease the learning curve, Data Cellar has developed a small Python package named `edcpy` that wraps the logic to interact with the APIs of your connector. You can find it [published on PyPI](https://pypi.org/project/edcpy/). The source code is [available here](https://github.com/fundacionctic/connector-building-blocks/tree/main/edcpy), and [this link](https://github.com/fundacionctic/connector-building-blocks/tree/main/example) provides examples of how to use it.
+
+### Testing Against the Public Test Connector
+
+There is a public test connector available at `ctic.dcserver.cticpoc.com` that you can use to test your participant against.
+
+More specifically, there is a task `connector:test-catalogue-remote` that fetches the catalogue from a remote connector and prints it to the console. This can be useful to verify that:
+
+* Your participant is correctly configured
+* Your wallet has been issued a valid Data Cellar Verifiable Credential
+* Your connector can successfully reach the Data Cellar data space
+
+The task can be run by executing the following command in the `deploy/participants/<participant-name>` directory:
+
+```
+REMOTE_PROTOCOL_URL=https://ctic.dcserver.cticpoc.com/protocol task connector:test-catalogue-remote
+```
+
+> [!TIP]
+> You can test other connectors by replacing the hostname in the `REMOTE_PROTOCOL_URL` environment variable.
+
+> [!NOTE]
+> The API exposed by the public test connector to the data space is the sample **Pet Store Server**, available at [`petstore3.swagger.io`](https://petstore3.swagger.io/).
 
 ## License
 
