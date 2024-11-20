@@ -1,0 +1,18 @@
+services:
+
+  webui:
+    image: docker.io/razzabi/participant-webui:v0.1.0
+    container_name: ${COMPONENT_NAME}.credentials-webui
+    entrypoint: sh -c "yarn preview --port 8080 --host"
+    restart: always
+    environment:
+      VITE_BASE_URL: https://${PARTICIPANT_NAME}.${DOMAIN_NAME}
+      VITE_API_BASE_URL: "https://${PARTICIPANT_NAME}.${DOMAIN_NAME}/api/v1/"
+      VITE_PARTICIPANT_NAME: ${PARTICIPANT_NAME}
+    networks:
+      - datacellar
+
+networks:
+  datacellar:
+    external: true
+    name: datacellar_network

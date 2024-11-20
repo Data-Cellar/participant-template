@@ -1,6 +1,6 @@
 services:
   credentials-api:
-    image: docker.io/agmangas/datacellar-cli:v0.3.1
+    image: razzabi/datacellar-cli:v0.3.2
     container_name: ${PARTICIPANT_NAME}.credentials-api
     restart: unless-stopped
     command: datacellar serve-api --port 8080
@@ -19,6 +19,19 @@ services:
       WALLET_USER_PASSWORD: ${WALLET_USER_PASSWORD}
       DID_WEB_DOMAIN: ${DID_WEB_DOMAIN}
       ISSUER_API_KEY: ${ISSUER_API_KEY}
+
+      LOCAL_PROTOCOL_URL: "https://${PARTICIPANT_NAME}.${DOMAIN_NAME}/protocol"
+      EDC_CONNECTOR_SCHEME: "http"
+      EDC_CONNECTOR_HOST: "${PARTICIPANT_NAME}.${DOMAIN_NAME}"
+      EDC_CONNECTOR_CONNECTOR_ID: "${PARTICIPANT_NAME}"
+      EDC_CONNECTOR_PARTICIPANT_ID: "${PARTICIPANT_NAME}"
+      EDC_CONNECTOR_MANAGEMENT_PORT: 80
+      EDC_CONNECTOR_CONTROL_PORT: 80
+      EDC_CONNECTOR_PUBLIC_PORT: 80
+      EDC_CONNECTOR_PROTOCOL_PORT: 80
+      EDC_CONNECTOR_API_KEY: ${EDC_CONNECTOR_API_KEY}
+      EDC_CONNECTOR_API_KEY_HEADER: ${EDC_CONNECTOR_API_KEY_HEADER}
+      
     networks:
       - datacellar
 

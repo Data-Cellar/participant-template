@@ -18,6 +18,7 @@ includes:
   credentials-manager: "credentials-manager/taskfile.yml"
   connector: "edc-connector/taskfile.yml"
   cde: "cde/taskfile.yml"
+  webui: "webui/taskfile.yml"
 
 tasks:
   start-all:
@@ -29,6 +30,7 @@ tasks:
       - task credentials-manager:provision-wallet
       - task: create-legalparticipant
       - task connector:start
+      - task webui:start
 
   stop-all:
     cmds:
@@ -36,6 +38,7 @@ tasks:
       - task connector:stop
       - task wallet:stop
       - task did-server:stop
+      - task webui:stop
 
   config-all:
     cmds:
