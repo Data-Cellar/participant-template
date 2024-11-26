@@ -1,0 +1,31 @@
+---
+#-------------------------------------------------------------------
+# authors     [ Radhouene AZZABI ]
+# contacts    [ azzabi.radhouene@cea.fr ]
+# created     2024/11-20T15:40:24
+# modified    2024/11-20T15:40:24
+# version     1.0.0
+#-------------------------------------------------------------------
+
+version: "3"
+
+#dotenv: ['../.env'] # uncomment if you want to test tasks localy
+
+tasks:
+  start:
+    desc: "Start Web-UI"
+    dir: "{{.WEB_UI_FOLDER}}"
+    preconditions:
+      - test -f docker-compose.yml
+    cmds:
+      - docker compose -p {{.PARTICIPANT_NAME}} up webui --wait
+
+  stop:
+    desc: "Stop Web-UI"
+    dir: "{{.WEB_UI_FOLDER}}"
+    preconditions:
+      - test docker-compose.yml
+    cmds:
+      - docker compose -p {{.PARTICIPANT_NAME}} down webui
+
+  
