@@ -1,6 +1,6 @@
 services:
   webui:
-    image: docker.io/razzabi/participant-webui:v0.1.0
+    image: docker.io/razzabi/participant-webui:v0.2.0
     container_name: ${PARTICIPANT_NAME}.credentials-webui
     entrypoint: sh -c "yarn preview --port 8080 --host"
     restart: always

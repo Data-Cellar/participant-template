@@ -1,6 +1,6 @@
 services:
   credentials-api:
-    image: docker.io/agmangas/datacellar-cli:v0.4.1
+    image: docker.io/agmangas/datacellar-cli:v0.4.2
     container_name: ${PARTICIPANT_NAME}.credentials-api
     restart: unless-stopped
     command: datacellar serve-api --port 8080
