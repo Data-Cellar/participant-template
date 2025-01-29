@@ -1,7 +1,7 @@
 aio-pika==9.4.3
 aiormq==6.8.1
 annotated-types==0.7.0
-anyio==4.6.2.post1
+anyio==4.8.0
 attrs==24.2.0
 certifi==2024.8.30
 cffi==1.17.1

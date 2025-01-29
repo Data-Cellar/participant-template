@@ -80,3 +80,23 @@ tasks:
         -e COUNTER_PARTY_PROTOCOL_URL={{.REMOTE_PROTOCOL_URL}}
         {{.EXAMPLES_IMAGE}}
         python3 /opt/examples/catalogue.py
+
+  test-fetch-dataset:
+    desc: "Run an example that downloads a dataset from a remote connector via contract negotiation (requires HTTP GET endpoint without arguments)"
+    deps:
+      - build-example-image
+    requires:
+      vars:
+        - REMOTE_PROTOCOL_URL
+        - COUNTER_PARTY_CONNECTOR_ID
+        - ASSET_QUERY
+    cmds:
+      - >
+        docker run
+        --rm --network datacellar_network
+        -e COUNTER_PARTY_PROTOCOL_URL={{.REMOTE_PROTOCOL_URL}}
+        -e COUNTER_PARTY_CONNECTOR_ID={{.COUNTER_PARTY_CONNECTOR_ID}}
+        -e ASSET_QUERY={{.ASSET_QUERY}}
+        -e EDC_RABBIT_URL=amqp://{{.RABBITMQ_DEFAULT_USER}}:{{.RABBITMQ_DEFAULT_PASS}}@{{.PARTICIPANT_NAME}}.connector-broker:5672
+        {{.EXAMPLES_IMAGE}}
+        python3 /opt/examples/get-dataset.py
