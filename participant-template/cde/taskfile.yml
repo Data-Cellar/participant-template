@@ -1,33 +1,66 @@
 #-------------------------------------------------------------------
-# authors     [ Radhouene AZZABI ]
-# contacts    [ azzabi.radhouene@cea.fr ]
-# created     2024/10-15T12:12:24
-# modified    2024/10-15T12:12:24
+# authors     [ Michael Vassiliadis ]
+# contacts    [ m.vassiliadis@que-tech.com ]
+# created     2025/03-14T10:00:00 
+# modified    2025/03-14T10:00:00 
 # version     1.0.0
 #-------------------------------------------------------------------
 
 version: "3"
 
 
-# dotenv: ['../.env'] # uncomment if you want to test tasks localy
+dotenv: ['.env']
 
 tasks:
+  prepare:
+    desc: "Load the cde-server Docker image to the engine"
+    cmds: 
+      - |
+        OS=$(uname -s)
+        ARCH=$(uname -m)
+        IMAGE_PATH="image/cde-server-1.0b-$OS-$ARCH.tar"
+        
+        # Start Fuseki service
+        docker compose up fuseki -d --wait
+       
+        # Create auth header once
+        AUTH_HEADER="Authorization: Basic $(echo -n "${FUSEKI_USER}:${FUSEKI_PASSWORD}" | base64)"
+        
+        # Check if dataset exists
+        echo "Checking if dataset ${FUSEKI_DATASET} exists..."
+        DATASET_EXISTS=$(curl -s -X GET \
+          -H "$AUTH_HEADER" \
+          "http://localhost:3030/$/datasets" | grep -c "${FUSEKI_DATASET}")
+        
+        if [ "$DATASET_EXISTS" -gt 0 ]; then
+          echo "Dataset ${FUSEKI_DATASET} already exists, skipping creation"
+        else
+          echo "Creating dataset ${FUSEKI_DATASET}..."
+          # Create the default Fuseki dataset 
+          curl -X POST \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -H "$AUTH_HEADER" \
+            -d "dbName=${FUSEKI_DATASET}&dbType=tdb2" \
+            "http://localhost:3030/$/datasets"
+          
+          if [ $? -eq 0 ]; then
+            echo "Dataset ${FUSEKI_DATASET} created successfully"
+          else
+            echo "Failed to create dataset ${FUSEKI_DATASET}"
+            exit 1
+          fi
+        fi
+
+        docker compose down fuseki
   start:
-    desc: "Start DID Server"
+    desc: "Start the cde-server"
     deps:
-      - config
-    dir: '{{.PARTICIPANT_FOLDER}}'
+      - prepare
     cmds:
-      - docker compose -p {{.PARTICIPANT_NAME}} up did-server -d --wait
+      - docker compose up -d --wait
   
   stop:
-    desc: "Stop DID Server"
-    dir: '{{.PARTICIPANT_FOLDER}}'
+    desc: "Stop the cde-server"
     cmds:
-        - docker compose -p {{.PARTICIPANT_NAME}} stop did-server
-  
-  config:
-    desc: "Config DID Server"
-    dir: '{{.PARTICIPANT_FOLDER}}/{{.STORE_FOLDER}}'
-    cmds:
-      - sudo chmod -R 755 credentials
+        - docker compose down
+

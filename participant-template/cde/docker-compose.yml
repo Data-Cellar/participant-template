@@ -1,0 +1,62 @@
+version: '3.8'
+
+services:
+  cde:
+    image: cde-server:1.0b
+    ports:
+      - "5000:5000"
+      - "5001:5001"
+    environment:
+      - FLASK_DEBUG=development
+      - INFLUXDB_URL=http://influxdb:8086
+      - INFLUXDB_TOKEN=${INFLUXDB_TOKEN}
+      - INFLUXDB_ORG=${INFLUXDB_ORG}
+      - INFLUXDB_BUCKET=${INFLUXDB_BUCKET}
+      - FUSEKI_URL=http://fuseki:3030
+    depends_on:
+      influxdb:
+        condition: service_healthy
+      fuseki:
+        condition: service_healthy
+
+  influxdb:
+    image: influxdb:2.6
+    ports:
+      - "8086:8086"
+    volumes:
+      - influxdb-data:/var/lib/influxdb2
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=${INFLUXDB_USERNAME}
+      - DOCKER_INFLUXDB_INIT_PASSWORD=${INFLUXDB_PASSWORD}
+      - DOCKER_INFLUXDB_INIT_ORG=${INFLUXDB_ORG}
+      - DOCKER_INFLUXDB_INIT_BUCKET=${INFLUXDB_BUCKET}
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=${INFLUXDB_TOKEN}
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8086/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: always
+
+  fuseki:
+    image: stain/jena-fuseki
+    environment:
+      - ADMIN_PASSWORD=${FUSEKI_PASSWORD}
+      - JVM_ARGS=-Xmx2g
+    ports:
+      - "3030:3030"
+    volumes:
+      - fuseki-data:/fuseki
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3030/$/ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    restart: always
+
+volumes:
+  influxdb-data:
+  fuseki-data:
