@@ -81,10 +81,15 @@ tasks:
         {{.EXAMPLES_IMAGE}}
         python3 /opt/examples/catalogue.py
 
-  test-fetch-dataset:
+  test-get-dataset:
     desc: "Run an example that downloads a dataset from a remote connector via contract negotiation (requires HTTP GET endpoint without arguments)"
     deps:
       - build-example-image
+    vars:
+      # We need to run inside the connector's Docker network to connect to the broker
+      # We should fix this eventually so consumer applications can run on the host
+      NETWORK_NAME: datacellar_network
+      EDC_RABBIT_URL: amqp://{{.RABBITMQ_DEFAULT_USER}}:{{.RABBITMQ_DEFAULT_PASS}}@{{.PARTICIPANT_NAME}}.connector-broker:5672
     requires:
       vars:
         - REMOTE_PROTOCOL_URL
@@ -93,10 +98,10 @@ tasks:
     cmds:
       - >
         docker run
-        --rm --network datacellar_network
+        --rm --network {{.NETWORK_NAME}}
         -e COUNTER_PARTY_PROTOCOL_URL={{.REMOTE_PROTOCOL_URL}}
         -e COUNTER_PARTY_CONNECTOR_ID={{.COUNTER_PARTY_CONNECTOR_ID}}
         -e ASSET_QUERY={{.ASSET_QUERY}}
-        -e EDC_RABBIT_URL=amqp://{{.RABBITMQ_DEFAULT_USER}}:{{.RABBITMQ_DEFAULT_PASS}}@{{.PARTICIPANT_NAME}}.connector-broker:5672
+        -e EDC_RABBIT_URL={{.EDC_RABBIT_URL}}
         {{.EXAMPLES_IMAGE}}
         python3 /opt/examples/get-dataset.py

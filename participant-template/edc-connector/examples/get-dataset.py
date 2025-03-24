@@ -12,6 +12,7 @@ _ENV_LOG_LEVEL = "LOG_LEVEL"
 _ENV_COUNTER_PARTY_PROTOCOL_URL = "COUNTER_PARTY_PROTOCOL_URL"
 _ENV_COUNTER_PARTY_CONNECTOR_ID = "COUNTER_PARTY_CONNECTOR_ID"
 _ENV_ASSET_QUERY = "ASSET_QUERY"
+_TIMEOUT_FOR_TRANSFER_SECONDS = 30
 
 _logger = logging.getLogger(__name__)
 
@@ -33,7 +34,8 @@ async def pull_handler(message: dict, queue: asyncio.Queue):
 
 
 async def main():
-    """List the assets available in the Provider's catalogue."""
+    """Download a dataset from a remote connector after going through the
+    contract negotiation process (requires HTTP GET endpoint without arguments)."""
 
     counter_party_protocol_url: str = os.getenv(_ENV_COUNTER_PARTY_PROTOCOL_URL)
     counter_party_connector_id: str = os.getenv(_ENV_COUNTER_PARTY_CONNECTOR_ID)
@@ -66,12 +68,20 @@ async def main():
 
         _logger.info("Transfer process ID: %s", transfer_process_id)
 
-        http_pull_msg = await asyncio.wait_for(queue.get(), timeout=20)
+        _logger.info(
+            "Waiting %s seconds for HTTP Pull message from the broker...",
+            _TIMEOUT_FOR_TRANSFER_SECONDS,
+        )
+
+        http_pull_msg = await asyncio.wait_for(
+            queue.get(), timeout=_TIMEOUT_FOR_TRANSFER_SECONDS
+        )
 
         async with httpx.AsyncClient() as client:
             request_args = {**http_pull_msg.request_args}
 
             # ToDo: This is a workaround to fix an issue with the reverse proxy
+            # https://github.com/Data-Cellar/participant-template/issues/15
             request_args["url"] = "{}/".format(request_args["url"].rstrip("/"))
 
             _logger.info(
@@ -80,7 +90,10 @@ async def main():
             )
 
             resp = await client.request(**request_args)
-            _logger.info("Response dataset:\n%s", pprint.pformat(resp.json()))
+            resp.raise_for_status()
+            resp_json = resp.json()
+
+        _logger.info("Response dataset:\n%s", pprint.pformat(resp_json))
 
 
 if __name__ == "__main__":
