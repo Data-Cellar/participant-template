@@ -1,6 +1,6 @@
 services:
   credentials-api:
-    image: docker.io/agmangas/datacellar-cli:v0.4.2
+    image: docker.io/agmangas/datacellar-cli:v0.4.42
     container_name: ${PARTICIPANT_NAME}.credentials-api
     restart: unless-stopped
     command: datacellar serve-api --port 8080
@@ -30,6 +30,8 @@ services:
       EDC_CONNECTOR_PROTOCOL_PORT: 80
       EDC_CONNECTOR_API_KEY: ${EDC_CONNECTOR_API_KEY}
       EDC_CONNECTOR_API_KEY_HEADER: ${EDC_CONNECTOR_API_KEY_HEADER}
+
+      EDC_RABBIT_URL: amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@${PARTICIPANT_NAME}.connector-broker:5672
     networks:
       - datacellar
 
