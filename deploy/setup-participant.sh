@@ -73,7 +73,7 @@ declare -A DEFAULTS=(
     ["PROXY_FOLDER"]="$USER_WORKING_DIR/reverse-proxy/caddy"
     ["USE_LETSENCRYPT"]="true"
     ["DATACELLAR_IDP_URL"]="https://idp.datacellar.cosypoc.ovh"
-    ["ISSUER_DID"]="did:web:idp.datacellar.cosypoc.ovh:wallet-api:registry:01c06d48-6174-4323-a007-bd8af6d5b0c5"
+    ["ISSUER_DID"]="did:web:idp.datacellar.cosypoc.ovh:wallet-api:registry:35103002-ac6c-474e-a083-f8cc046ea2bd"
 )
 
 # Collect user inputs
