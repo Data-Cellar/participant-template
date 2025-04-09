@@ -90,12 +90,13 @@ prompt_user "Set API key to access the Issuer API" "${DEFAULTS[ISSUER_API_KEY]}"
 prompt_user "Set URL of the Verifier API" "$datacellar_idp_url" verifier_api_url
 prompt_user "Do you want to use the CDE? (true/false)" "${DEFAULTS[USE_CDE]}" use_cde
 
-# only when use_cde is false
 if [ "$use_cde" = "false" ]; then
     OPENAPI_URL_PROMPT="Enter the URL of the OpenAPI file that defines your connector's API, \
     or leave it blank if your connector functions strictly as a consumer \
     (e.g., https://petstore3.swagger.io/api/v3/openapi.json)"
     prompt_user "$OPENAPI_URL_PROMPT" "" connector_openapi_url "true"
+else
+    connector_openapi_url="https://cde:5001/openapi.json"
 fi
 
 # Export environment variables
