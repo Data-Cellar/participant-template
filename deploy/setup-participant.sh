@@ -74,6 +74,7 @@ declare -A DEFAULTS=(
     ["USE_LETSENCRYPT"]="true"
     ["DATACELLAR_IDP_URL"]="https://idp.datacellar.cosypoc.ovh"
     ["ISSUER_DID"]="did:web:idp.datacellar.cosypoc.ovh:wallet-api:registry:01c06d48-6174-4323-a007-bd8af6d5b0c5"
+    ["USE_CDE"]="true"
 )
 
 # Collect user inputs
@@ -87,11 +88,15 @@ prompt_user "Set URL of the Issuer API" "$datacellar_idp_url" issuer_api_url
 prompt_user "Set DID of the trust anchor (i.e., the central trusted issuer)" "${DEFAULTS[ISSUER_DID]}" issuer_did
 prompt_user "Set API key to access the Issuer API" "${DEFAULTS[ISSUER_API_KEY]}" issuer_api_key
 prompt_user "Set URL of the Verifier API" "$datacellar_idp_url" verifier_api_url
+prompt_user "Do you want to use the CDE? (true/false)" "${DEFAULTS[USE_CDE]}" use_cde
 
-OPENAPI_URL_PROMPT="Enter the URL of the OpenAPI file that defines your connector's API, \
-or leave it blank if your connector functions strictly as a consumer \
-(e.g., https://petstore3.swagger.io/api/v3/openapi.json)"
-prompt_user "$OPENAPI_URL_PROMPT" "" connector_openapi_url "true"
+# only when use_cde is false
+if [ "$use_cde" = "false" ]; then
+    OPENAPI_URL_PROMPT="Enter the URL of the OpenAPI file that defines your connector's API, \
+    or leave it blank if your connector functions strictly as a consumer \
+    (e.g., https://petstore3.swagger.io/api/v3/openapi.json)"
+    prompt_user "$OPENAPI_URL_PROMPT" "" connector_openapi_url "true"
+fi
 
 # Export environment variables
 declare -A ENV_VARS=(
@@ -106,6 +111,7 @@ declare -A ENV_VARS=(
     ["ISSUER_API_KEY"]="$issuer_api_key"
     ["VERIFIER_API_BASE_URL"]="$verifier_api_url"
     ["CONNECTOR_OPENAPI_URL"]="$connector_openapi_url"
+    ["USE_CDE"]="$use_cde"
 )
 
 for key in "${!ENV_VARS[@]}"; do
@@ -131,6 +137,7 @@ declare -A DISPLAY_VARS=(
     ["Domain"]="$DOMAIN_NAME"
     ["Proxy folder"]="$PROXY_FOLDER"
     ["Using Let's Encrypt"]="$USE_LETSENCRYPT"
+    ["Using CDE"]="$USE_CDE"
 )
 
 printf "\n📋 Configuration Summary:\n\n"
