@@ -39,6 +39,7 @@ tasks:
       - task wallet:stop
       - task did-server:stop
       - task webui:stop
+      - task cde:stop
 
   config-all:
     cmds:

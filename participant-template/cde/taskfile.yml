@@ -8,82 +8,74 @@
 
 version: "3"
 
-
-# dotenv: ['.env']
-
-vars:
-  CDE_INFLUXDB_URL: http://localhost:8086
-  CDE_INFLUXDB_TOKEN: your_influxdb_token
-  CDE_INFLUXDB_ORG: your_organization
-  CDE_INFLUXDB_BUCKET: your_bucket
-  CDE_INFLUXDB_USERNAME: your_username
-  CDE_INFLUXDB_PASSWORD: your_password
-  CDE_INTERNAL_API_HOST: 0.0.0.0:5000
-  CDE_EXTERNAL_API_HOST: 0.0.0.0:5001
-  CDE_GRAPH_STORE_USER: neo4j
-  CDE_GRAPH_STORE_PASSWORD: neo4jpass
-  CDE_SHACL_FILE: data/shapes_v3.ttl
-  CDE_FUSEKI_USER: admin
-  CDE_FUSEKI_PASSWORD: fusekipass
-  CDE_FUSEKI_URL: http://fuseki:3030
-  CDE_FUSEKI_DATASET: cde
-  CDE_FLASK_RUN_HOST_INT: 0.0.0.0
-  CDE_FLASK_RUN_PORT_INT: 5000
-  CDE_FLASK_RUN_HOST_EXT: 0.0.0.0
-  CDE_FLASK_RUN_PORT_EXT: 5001
+# dotenv: ['../.env']
 
 tasks:
   login-ghcr:
     desc: "Login to GHCR"
+    dir: '{{.CDE_FOLDER}}'
     cmds:
       - |
-        echo "${CDE_GHCR_PAT}" | docker login ghcr.io -u ${CDE_GHCR_USERNAME} --password-stdin
+        echo "{{.CDE_GHCR_PAT}}" | docker login ghcr.io -u {{.CDE_GHCR_USERNAME}} --password-stdin
 
   prepare:
     desc: "Load the cde-server Docker image to the engine"
+    dir: '{{.CDE_FOLDER}}'
     cmds: 
       - |
         # Start Fuseki service
-        docker compose up fuseki -d --wait
+        docker compose -p {{.PARTICIPANT_NAME}} -f {{.CDE_FOLDER}}/docker-compose.yml up fuseki -d --wait
        
         # Create auth header once
-        AUTH_HEADER="Authorization: Basic $(echo -n "${CDE_FUSEKI_USER}:${CDE_FUSEKI_PASSWORD}" | base64)"
-        
+        AUTH_HEADER="Authorization: Basic $(echo -n "{{.CDE_FUSEKI_USER}}:{{.CDE_FUSEKI_PASSWORD}}" | base64)"
+
         # Check if dataset exists
-        echo "Checking if dataset ${CDE_FUSEKI_DATASET} exists..."
+        echo "Checking if dataset {{.CDE_FUSEKI_DATASET}} exists..."
         DATASET_EXISTS=$(curl -s -X GET \
           -H "$AUTH_HEADER" \
-          "http://localhost:3030/$/datasets" | grep -c "${CDE_FUSEKI_DATASET}")
-        
+          "http://localhost:3030/$/datasets" | grep -c "{{.CDE_FUSEKI_DATASET}}" || true)
+
         if [ "$DATASET_EXISTS" -gt 0 ]; then
-          echo "Dataset ${CDE_FUSEKI_DATASET} already exists, skipping creation"
+          echo "Dataset {{.CDE_FUSEKI_DATASET}} already exists, skipping creation"
         else
-          echo "Creating dataset ${CDE_FUSEKI_DATASET}..."
+          echo "Creating dataset {{.CDE_FUSEKI_DATASET}}..."
           # Create the default Fuseki dataset 
           curl -X POST \
             -H "Content-Type: application/x-www-form-urlencoded" \
             -H "$AUTH_HEADER" \
-            -d "dbName=${CDE_FUSEKI_DATASET}&dbType=tdb2" \
+            -d "dbName={{.CDE_FUSEKI_DATASET}}&dbType=tdb2" \
             "http://localhost:3030/$/datasets"
           
           if [ $? -eq 0 ]; then
-            echo "Dataset ${CDE_FUSEKI_DATASET} created successfully"
+            echo "Dataset {{.CDE_FUSEKI_DATASET}} created successfully"
           else
-            echo "Failed to create dataset ${CDE_FUSEKI_DATASET}"
+            echo "Failed to create dataset {{.CDE_FUSEKI_DATASET}}"
             exit 1
           fi
         fi
 
-        docker compose down fuseki
+        docker compose -p {{.PARTICIPANT_NAME}} -f {{.CDE_FOLDER}}/docker-compose.yml down fuseki
   start:
     desc: "Start the cde-server"
+    dir: '{{.CDE_FOLDER}}'
     deps:
+      - login-ghcr
       - prepare
     cmds:
-      - docker compose up -d --wait
+      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.CDE_FOLDER}}/docker-compose.yml up -d --wait
   
   stop:
     desc: "Stop the cde-server"
+    dir: '{{.CDE_FOLDER}}'
     cmds:
-        - docker compose down
+      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.CDE_FOLDER}}/docker-compose.yml  down
+
+  reset:
+    desc: "Reset the cde-configuration"
+    dir: '{{.CDE_FOLDER}}'
+    cmds:
+      - >
+      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.CDE_FOLDER}}/docker-compose.yml  down
+      - docker rm vc-fuseki-1 || true
+      - docker volume rm vc_fuseki-data || true
 
