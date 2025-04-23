@@ -66,6 +66,10 @@ prompt_user() {
     fi
 }
 
+USER_WORKING_DIR="${USER_WORKING_DIR:-.}"
+echo "Working directory is: $USER_WORKING_DIR"
+
+
 # Default configuration values
 declare -A DEFAULTS=(
     ["PARTICIPANT_NAME"]="consumer"
@@ -73,7 +77,8 @@ declare -A DEFAULTS=(
     ["PROXY_FOLDER"]="$USER_WORKING_DIR/reverse-proxy/caddy"
     ["USE_LETSENCRYPT"]="true"
     ["DATACELLAR_IDP_URL"]="https://idp.datacellar.cosypoc.ovh"
-    ["ISSUER_DID"]="did:web:idp.datacellar.cosypoc.ovh:wallet-api:registry:01c06d48-6174-4323-a007-bd8af6d5b0c5"
+    ["ISSUER_DID"]="did:web:idp.datacellar.cosypoc.ovh:wallet-api:registry:35103002-ac6c-474e-a083-f8cc046ea2bd"
+    # ["ISSUER_DID"]="did:web:idp.datacellar.cosypoc.ovh:wallet-api:registry:01c06d48-6174-4323-a007-bd8af6d5b0c5"
     ["USE_CDE"]="true"
 )
 
@@ -96,7 +101,9 @@ if [ "$use_cde" = "false" ]; then
     (e.g., https://petstore3.swagger.io/api/v3/openapi.json)"
     prompt_user "$OPENAPI_URL_PROMPT" "" connector_openapi_url "true"
 else
-    connector_openapi_url="https://cde:5001/openapi.json"
+    INFLUXDB_TOKEN=$(openssl rand -hex 32)
+    INFLUXDB_PASSWORD=$(openssl rand -hex 8)
+    connector_openapi_url="http://cde:5001/openapi.json"
 fi
 
 # Export environment variables
@@ -125,7 +132,7 @@ PARTICIPANT_TEMPLATE="$USER_WORKING_DIR/../participant-template/"
 EXTERNAL_PROXY_FOLDER="$PROXY_FOLDER"
 PROXY_CERT_FOLDER="$PROXY_FOLDER/certs"
 
-export PARTICIPANT_FOLDER PARTICIPANT_TEMPLATE EXTERNAL_PROXY_FOLDER PROXY_CERT_FOLDER
+export PARTICIPANT_FOLDER PARTICIPANT_TEMPLATE EXTERNAL_PROXY_FOLDER PROXY_CERT_FOLDER INFLUXDB_TOKEN INFLUXDB_PASSWORD USE_CDE
 
 # Display configuration
 print_separator

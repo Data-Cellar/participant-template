@@ -31,6 +31,7 @@ tasks:
       - task: create-legalparticipant
       - task connector:start
       - task webui:start
+      - cmd: sh -c '{{if .USE_CDE}} echo "task cde:start" && task cde:start{{end}}'
 
   stop-all:
     cmds:
