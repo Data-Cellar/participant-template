@@ -55,6 +55,7 @@ tasks:
         fi
 
         docker compose -p {{.PARTICIPANT_NAME}} -f {{.CDE_FOLDER}}/docker-compose.yml down fuseki
+
   start:
     desc: "Start the cde-server"
     dir: '{{.CDE_FOLDER}}'
@@ -78,4 +79,20 @@ tasks:
       - docker compose -p {{.PARTICIPANT_NAME}} -f {{.CDE_FOLDER}}/docker-compose.yml  down
       - docker rm vc-fuseki-1 || true
       - docker volume rm vc_fuseki-data || true
+
+  upload-test-dataset:
+    desc: "Upload test dataset_A1.json to the CDE via internal API on port 5000"
+    dir: '{{.CDE_FOLDER}}'
+    cmds:
+      - |
+        # Check if CDE is running
+        if curl -sf http://localhost:5000/api/dataset > /dev/null; then
+          echo "CDE is running. Proceeding to upload dataset..."
+          curl -X POST \
+            -F "file=@dataset_A1.json" \
+            http://localhost:5000/api/dataset
+        else
+          echo "CDE is not running on port 5000. Aborting upload."
+          exit 1
+        fi
 
