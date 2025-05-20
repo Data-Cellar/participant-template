@@ -1,9 +1,10 @@
 services:
   cde:
     image: ghcr.io/que-technologies/datacellar-cde:latest
+    container_name: ${PARTICIPANT_NAME}.cde
     ports:
-      - "5000:5000"
-      - "5001:5001"
+      - "127.0.0.1:5000:5000"
+      - "127.0.0.1:5001:5001"
     environment:
       FLASK_DEBUG: development
       CDE_INFLUXDB_URL: http://influxdb:8086
@@ -21,8 +22,9 @@ services:
 
   influxdb:
     image: influxdb:2.6
+    container_name: ${PARTICIPANT_NAME}.influxdb
     ports:
-      - "8086:8086"
+      - "127.0.0.1:8086:8086"
     volumes:
       - influxdb-data:/var/lib/influxdb2
     environment:
@@ -44,11 +46,12 @@ services:
 
   fuseki:
     image: stain/jena-fuseki
+    container_name: ${PARTICIPANT_NAME}.fuseki
     environment:
       ADMIN_PASSWORD: ${CDE_FUSEKI_PASSWORD} 
       JVM_ARGS: -Xmx2g
     ports:
-      - "3030:3030"
+      - "127.0.0.1:3030:3030"
     volumes:
       - fuseki-data:/fuseki
     healthcheck:
