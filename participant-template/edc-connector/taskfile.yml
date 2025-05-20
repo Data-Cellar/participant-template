@@ -36,6 +36,13 @@ tasks:
     cmds:
       - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml down
 
+  restart:
+    desc: "Restart the connector stack"
+    deps:
+      - config
+    cmds:
+      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml restart connector
+
   build-example-image:
     desc: "Build the container image to run the connector examples"
     dir: "{{.TASKFILE_DIR}}/examples"
