@@ -1,33 +1,98 @@
 #-------------------------------------------------------------------
-# authors     [ Radhouene AZZABI ]
-# contacts    [ azzabi.radhouene@cea.fr ]
-# created     2024/10-15T12:12:24
-# modified    2024/10-15T12:12:24
+# authors     [ Michael Vassiliadis ]
+# contacts    [ m.vassiliadis@que-tech.com ]
+# created     2025/03-14T10:00:00 
+# modified    2025/03-14T10:00:00 
 # version     1.0.0
 #-------------------------------------------------------------------
 
 version: "3"
 
-
-# dotenv: ['../.env'] # uncomment if you want to test tasks localy
+# dotenv: ['../.env']
 
 tasks:
-  start:
-    desc: "Start DID Server"
-    deps:
-      - config
-    dir: '{{.PARTICIPANT_FOLDER}}'
+  login-ghcr:
+    desc: "Login to GHCR"
+    dir: '{{.CDE_FOLDER}}'
     cmds:
-      - docker compose -p {{.PARTICIPANT_NAME}} up did-server -d --wait
+      - |
+        echo "{{.CDE_GHCR_PAT}}" | docker login ghcr.io -u {{.CDE_GHCR_USERNAME}} --password-stdin
+
+  prepare:
+    desc: "Load the cde-server Docker image to the engine"
+    dir: '{{.CDE_FOLDER}}'
+    cmds: 
+      - |
+        # Start Fuseki service
+        docker compose -p {{.PARTICIPANT_NAME}} -f {{.CDE_FOLDER}}/docker-compose.yml up fuseki -d --wait
+       
+        # Create auth header once
+        AUTH_HEADER="Authorization: Basic $(echo -n "{{.CDE_FUSEKI_USER}}:{{.CDE_FUSEKI_PASSWORD}}" | base64)"
+
+        # Check if dataset exists
+        echo "Checking if dataset {{.CDE_FUSEKI_DATASET}} exists..."
+        DATASET_EXISTS=$(curl -s -X GET \
+          -H "$AUTH_HEADER" \
+          "http://localhost:3030/$/datasets" | grep -c "{{.CDE_FUSEKI_DATASET}}" || true)
+
+        if [ "$DATASET_EXISTS" -gt 0 ]; then
+          echo "Dataset {{.CDE_FUSEKI_DATASET}} already exists, skipping creation"
+        else
+          echo "Creating dataset {{.CDE_FUSEKI_DATASET}}..."
+          # Create the default Fuseki dataset 
+          curl -X POST \
+            -H "Content-Type: application/x-www-form-urlencoded" \
+            -H "$AUTH_HEADER" \
+            -d "dbName={{.CDE_FUSEKI_DATASET}}&dbType=tdb2" \
+            "http://localhost:3030/$/datasets"
+          
+          if [ $? -eq 0 ]; then
+            echo "Dataset {{.CDE_FUSEKI_DATASET}} created successfully"
+          else
+            echo "Failed to create dataset {{.CDE_FUSEKI_DATASET}}"
+            exit 1
+          fi
+        fi
+
+        docker compose -p {{.PARTICIPANT_NAME}} -f {{.CDE_FOLDER}}/docker-compose.yml down fuseki
+
+  start:
+    desc: "Start the cde-server"
+    dir: '{{.CDE_FOLDER}}'
+    deps:
+      - login-ghcr
+      - prepare
+    cmds:
+      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.CDE_FOLDER}}/docker-compose.yml up -d --wait
   
   stop:
-    desc: "Stop DID Server"
-    dir: '{{.PARTICIPANT_FOLDER}}'
+    desc: "Stop the cde-server"
+    dir: '{{.CDE_FOLDER}}'
     cmds:
-        - docker compose -p {{.PARTICIPANT_NAME}} stop did-server
-  
-  config:
-    desc: "Config DID Server"
-    dir: '{{.PARTICIPANT_FOLDER}}/{{.STORE_FOLDER}}'
+      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.CDE_FOLDER}}/docker-compose.yml  down
+
+  reset:
+    desc: "Reset the cde-configuration"
+    dir: '{{.CDE_FOLDER}}'
     cmds:
-      - sudo chmod -R 755 credentials
+      - >
+      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.CDE_FOLDER}}/docker-compose.yml  down
+    # - docker rm vc-fuseki-1 || true
+    # - docker volume rm vc_fuseki-data || true
+
+  upload-test-dataset:
+    desc: "Upload test dataset_A1.json to the CDE via internal API on port 5000"
+    dir: '{{.CDE_FOLDER}}'
+    cmds:
+      - |
+        # Check if CDE is running
+        if curl -sf http://localhost:5000/api/dataset > /dev/null; then
+          echo "CDE is running. Proceeding to upload dataset..."
+          curl -X POST \
+            -F "file=@dataset_A1.json" \
+            http://localhost:5000/api/dataset
+        else
+          echo "CDE is not running on port 5000. Aborting upload."
+          exit 1
+        fi
+
