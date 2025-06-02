@@ -24,7 +24,7 @@ tasks:
     cmds: 
       - |
         # Start Fuseki service
-        docker compose -p {{.PARTICIPANT_NAME}} -f {{.CDE_FOLDER}}/docker-compose.yml up fuseki -d --wait
+        docker compose -p {{.PARTICIPANT_NAME}} -f {{.CDE_FOLDER}}/docker-compose.yml up fuseki -d
        
         # Create auth header once
         AUTH_HEADER="Authorization: Basic $(echo -n "{{.CDE_FUSEKI_USER}}:{{.CDE_FUSEKI_PASSWORD}}" | base64)"
