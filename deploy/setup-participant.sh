@@ -74,6 +74,7 @@ declare -A DEFAULTS=(
     ["USE_LETSENCRYPT"]="true"
     ["DATACELLAR_IDP_URL"]="https://idp.datacellar.cosypoc.ovh"
     ["ISSUER_DID"]="did:web:idp.datacellar.cosypoc.ovh:wallet-api:registry:35103002-ac6c-474e-a083-f8cc046ea2bd"
+    ["USE_CDE"]="true"
 )
 
 # Collect user inputs
