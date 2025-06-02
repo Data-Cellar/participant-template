@@ -77,8 +77,8 @@ tasks:
     cmds:
       - >
       - docker compose -p {{.PARTICIPANT_NAME}} -f {{.CDE_FOLDER}}/docker-compose.yml  down
-    # - docker rm vc-fuseki-1 || true
-    # - docker volume rm vc_fuseki-data || true
+      - docker volume rm {{.PARTICIPANT_NAME}}_fuseki-data || true
+      - docker volume rm {{.PARTICIPANT_NAME}}_influxdb-data || true
 
   upload-test-dataset:
     desc: "Upload test dataset_A1.json to the CDE via internal API on port 5000"
