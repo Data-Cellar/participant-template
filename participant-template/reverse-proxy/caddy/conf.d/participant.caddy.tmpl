@@ -14,7 +14,7 @@ http://${PARTICIPANT_NAME}.${DOMAIN_NAME}, ${PARTICIPANT_NAME}.${DOMAIN_NAME} {
 
 	handle /wallet-api/* {
 		reverse_proxy ${PARTICIPANT_NAME}.wallet:7001
-		request_header -Accept
+		#request_header -Accept
 	}
 
 	#------------------------------------------------------------------
