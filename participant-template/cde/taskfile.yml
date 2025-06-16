@@ -11,13 +11,6 @@ version: "3"
 # dotenv: ['../.env']
 
 tasks:
-  login-ghcr:
-    desc: "Login to GHCR"
-    dir: '{{.CDE_FOLDER}}'
-    cmds:
-      - |
-        echo "{{.CDE_GHCR_PAT}}" | docker login ghcr.io -u {{.CDE_GHCR_USERNAME}} --password-stdin
-
   prepare:
     desc: "Load the cde-server Docker image to the engine"
     dir: '{{.CDE_FOLDER}}'
@@ -59,9 +52,6 @@ tasks:
   start:
     desc: "Start the cde-server"
     dir: '{{.CDE_FOLDER}}'
-    deps:
-      - login-ghcr
-      - prepare
     cmds:
       - docker compose -p {{.PARTICIPANT_NAME}} -f {{.CDE_FOLDER}}/docker-compose.yml up -d --wait
   
