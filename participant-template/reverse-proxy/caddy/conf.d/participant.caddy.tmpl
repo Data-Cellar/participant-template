@@ -92,4 +92,12 @@ http://${PARTICIPANT_NAME}.${DOMAIN_NAME}, ${PARTICIPANT_NAME}.${DOMAIN_NAME} {
 	handle /push* {
 		reverse_proxy ${PARTICIPANT_NAME}.connector-backend:${EDC_BACKEND_PORT}
 	}
+
+	#------------------------------------------------------------------
+	# Expose the CDE API publicly for testing purposes
+	#------------------------------------------------------------------
+
+	handle_path /cde* {
+		reverse_proxy ${PARTICIPANT_NAME}.cde:5000
+	}
 }

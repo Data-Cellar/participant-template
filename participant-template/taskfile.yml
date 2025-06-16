@@ -31,8 +31,8 @@ tasks:
       - task: create-legalparticipant
       - task connector:start
       - task webui:start
-      - cmd: sh -c '{{if .USE_CDE}} echo "task cde:start" && task cde:start{{end}}'
-      - cmd: sh -c '{{if .USE_CDE}} echo "monitor CDE" && task monitor-cde-openapi &{{end}}'
+      - cmd: sh -c '{{if eq .USE_CDE "true"}} echo "task cde:start" && task cde:start{{end}}'
+      - cmd: sh -c '{{if eq .USE_CDE "true"}} echo "monitor CDE" && task monitor-cde-openapi &{{end}}'
 
   stop-all:
     cmds:
