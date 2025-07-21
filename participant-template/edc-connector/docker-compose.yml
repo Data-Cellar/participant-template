@@ -29,6 +29,7 @@ services:
       EDC_CERT_PATH: /etc/connector/certs/${PARTICIPANT_CERT}
       EDC_RABBIT_URL: amqp://${RABBITMQ_DEFAULT_USER}:${RABBITMQ_DEFAULT_PASS}@${PARTICIPANT_NAME}.connector-broker:5672
       EDC_HTTP_API_PORT: ${EDC_BACKEND_PORT}
+      API_AUTH_KEY: ${EDC_CONNECTOR_API_KEY}
     # ports:
     #   - 28000:28000
     command: [run-http-backend]
