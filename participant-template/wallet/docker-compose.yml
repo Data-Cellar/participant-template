@@ -5,17 +5,20 @@ services:
     restart: unless-stopped
     volumes:
       - ./waltid/config:/waltid-wallet-api/config
-      - ./waltid/data:/waltid-wallet-api/data
+      - wallet_data:/waltid-wallet-api/data
     # ports:
     #   - 7001:7001
     networks:
       - datacellar
     healthcheck:
-      test: curl http://localhost:7001/swagger/index.html
-      interval: 10s
-      timeout: 5s
+      test: ["CMD", "curl", "-f", "http://localhost:7001/swagger/index.html"]
+      interval: 30s
+      timeout: 10s
       retries: 3
-      start_period: 5s
+      start_period: 30s
+
+volumes:
+  wallet_data: {}
 
 networks:
   datacellar:
