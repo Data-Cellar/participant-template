@@ -46,6 +46,7 @@ tasks:
       - task did-server:stop
       - task webui:stop
       - task cde:stop
+      - cmd: sh -c '{{if eq .USE_CDE "true"}} echo "monitor CDE" && task stop-monitor &{{end}}'
 
   config-all:
     cmds:
