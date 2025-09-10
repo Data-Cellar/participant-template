@@ -48,16 +48,38 @@ tasks:
     deps:
       - start-api
     cmds:
-      - >
-        read -p "Enter legal name (CEA): " legalname &&
-        legalname=${legalname:-CEA} &&
-        read -p "Enter VAT ID (FR43775685019): " vatid &&
-        vatid=${vatid:-FR43775685019} &&
-        read -p "Enter country subdivision code (FR-OCC): " subdivision &&
-        subdivision=${subdivision:-FR-OCC} &&
-        echo "Creating legal participant: legalName=$legalname, vatID=$vatid, CountrySubdivisionCode=$subdivision" &&
-        docker exec -it {{.PARTICIPANT_NAME}}.credentials-api
-        datacellar create-legal-participant --participant-legal-name=$legalname --participant-vat-id=$vatid --participant-country-subdivision-code=$subdivision
+      - |
+        if [ -f .env.local ]; then
+          echo "Found existing .env.local:"
+          cat .env.local
+          read -p "Do you want to reuse these values? [Y/n]: " reuse
+          reuse=${reuse:-Y}
+        else
+          reuse="n"
+        fi
+
+        if [ "$reuse" = "n" ] || [ "$reuse" = "N" ]; then
+          read -p "Enter legal name (CEA): " legalname
+          legalname=${legalname:-CEA}
+          read -p "Enter VAT ID (FR43775685019): " vatid
+          vatid=${vatid:-FR43775685019}
+          read -p "Enter country subdivision code (FR-OCC): " subdivision
+          subdivision=${subdivision:-FR-OCC}
+          echo "LEGAL_NAME=$legalname" > .env.local
+          echo "VAT_ID=$vatid" >> .env.local
+          echo "SUBDIVISION=$subdivision" >> .env.local
+        fi
+
+        # Load values
+        source .env.local
+
+        echo "Using: legalName=$LEGAL_NAME, vatID=$VAT_ID, CountrySubdivisionCode=$SUBDIVISION"
+
+        docker exec -it {{.PARTICIPANT_NAME}}.credentials-api \
+          datacellar create-legal-participant \
+            --participant-legal-name=$LEGAL_NAME \
+            --participant-vat-id=$VAT_ID \
+            --participant-country-subdivision-code=$SUBDIVISION
 
   upgrade:
     desc: "Upgrade the credentials-manager"
@@ -65,18 +87,3 @@ tasks:
     cmds:
       - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml pull --ignore-pull-failures --quiet --policy always
   
-  # register-legalparticipant-catalogue:
-  #   desc: "Register a legal participant to the global catalogue"
-  #   deps:
-  #     - start-api
-  #   silent: true
-  #   dir: "{{.CREDENTIALS_MANAGER_FOLDER}}"
-  #   cmds:
-  #     - |
-  #       read -p "VP Legal Participant (url or id): " legalparticipant_id
-  #       legalparticipant_id=${legalparticipant_id:-}
-
-  #       docker exec -it {{.PARTICIPANT_NAME}}.credentials-api \
-  #         bash -c "\
-  #         LEGAL_PARTICIPANT_ID=$legalparticipant_id \
-  #         python3 register_participant_to_catalogue.py"
