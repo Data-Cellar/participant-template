@@ -13,11 +13,11 @@ version: "3"
 tasks:
   prepare:
     desc: "Load the cde-server Docker image to the engine"
-    dir: '{{.CDE_FOLDER}}'
+    dir: '{{.TASKFILE_DIR}}'
     cmds: 
       - |
         # Start Fuseki service
-        docker compose -p {{.PARTICIPANT_NAME}} -f {{.CDE_FOLDER}}/docker-compose.yml up fuseki -d
+        docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml up fuseki -d
        
         # Create auth header once
         AUTH_HEADER="Authorization: Basic $(echo -n "{{.CDE_FUSEKI_USER}}:{{.CDE_FUSEKI_PASSWORD}}" | base64)"
@@ -47,32 +47,43 @@ tasks:
           fi
         fi
 
-        docker compose -p {{.PARTICIPANT_NAME}} -f {{.CDE_FOLDER}}/docker-compose.yml down fuseki
+        docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml down fuseki
 
   start:
     desc: "Start the cde-server"
-    dir: '{{.CDE_FOLDER}}'
     cmds:
-      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.CDE_FOLDER}}/docker-compose.yml up -d --wait
+      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml up -d --wait
   
   stop:
     desc: "Stop the cde-server"
-    dir: '{{.CDE_FOLDER}}'
+    silent: true
     cmds:
-      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.CDE_FOLDER}}/docker-compose.yml  down
+      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml  down
+
+  config:
+    silent: true
+    desc: "Config the cde-server"
+    cmds:
+      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml pull --ignore-pull-failures --quiet --policy always
+  
+
+  upgrade:
+    desc: "Upgrade the cde"
+    silent: true
+    cmds:
+      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml pull --ignore-pull-failures --quiet --policy always
 
   reset:
     desc: "Reset the cde-configuration"
-    dir: '{{.CDE_FOLDER}}'
     cmds:
       - >
-      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.CDE_FOLDER}}/docker-compose.yml  down
+      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml  down
       - docker volume rm {{.PARTICIPANT_NAME}}_fuseki-data || true
       - docker volume rm {{.PARTICIPANT_NAME}}_influxdb-data || true
 
   upload-test-dataset:
     desc: "Upload test dataset_A1.json to the CDE via internal API on port 5000"
-    dir: '{{.CDE_FOLDER}}'
+    dir: '{{.TASKFILE_DIR}}'
     cmds:
       - |
         # Check if CDE is running

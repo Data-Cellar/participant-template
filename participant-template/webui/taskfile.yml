@@ -14,18 +14,24 @@ version: "3"
 tasks:
   start:
     desc: "Start Web-UI"
-    dir: "{{.WEB_UI_FOLDER}}"
+    silent: true
     preconditions:
-      - test -f docker-compose.yml
+      - test -f {{.TASKFILE_DIR}}/docker-compose.yml
     cmds:
-      - docker compose -p {{.PARTICIPANT_NAME}} up webui --wait
+      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml up webui --wait
 
   stop:
     desc: "Stop Web-UI"
-    dir: "{{.WEB_UI_FOLDER}}"
+    silent: true
     preconditions:
-      - test docker-compose.yml
+      - test {{.TASKFILE_DIR}}/docker-compose.yml
     cmds:
-      - docker compose -p {{.PARTICIPANT_NAME}} down webui
+      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml down webui
 
-  
+  upgrade:
+    desc: "Upgrade the Webui"
+    silent: true
+    preconditions:
+      - test -f {{.TASKFILE_DIR}}/docker-compose.yml
+    cmds:
+      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml pull --ignore-pull-failures --quiet --policy always

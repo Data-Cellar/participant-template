@@ -14,21 +14,28 @@ version: "3"
 tasks:
   start:
     desc: "Start DID Server"
+    silent: true
     deps:
       - config
-    dir: '{{.DID_SERVER_FOLDER}}'
     cmds:
-      - docker compose -p {{.PARTICIPANT_NAME}} up did-server -d --wait
+      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml up did-server -d --wait
   stop:
     desc: "Stop DID Server"
-    dir: '{{.DID_SERVER_FOLDER}}'
+    silent: true
     cmds:
-        - docker compose -p {{.PARTICIPANT_NAME}} down did-server
+        - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml down did-server
   
   config:
     desc: "Config DID Server"
+    silent: true
     dir: '{{.CREDENTIALS_FOLDER}}'
     cmds:
       - sudo chmod -R 755 vc
       - sudo chmod -R 755 vp
       - sudo chmod -R 755 .well-known
+
+  upgrade:
+    desc: "Upgrade the did-server"
+    silent: true
+    cmds:
+      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml pull --ignore-pull-failures --quiet --policy always

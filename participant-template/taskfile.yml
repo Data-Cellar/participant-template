@@ -22,6 +22,10 @@ includes:
 
 tasks:
   start-all:
+    deps:
+      - check-domain
+      - check-api-key
+      - config-all
     cmds:
       - task: generate-certs
       - task did-server:start
@@ -127,3 +131,67 @@ tasks:
         else
           echo "No running monitor task found."
         fi
+
+  upgrade:
+    desc: "Upgrade the participant conponents"
+    cmds:
+      - task: stop-all
+      - task: fetch-template
+      - task credentials-manager:upgrade
+      - task webui:upgrade
+      - task wallet:upgrade
+      - task did-server:upgrade
+      - task connector:upgrade
+      - task cde:upgrade
+      
+  fetch-template:
+    desc: "Upgrade the participant conponents"
+    silent: true
+    env:
+      PARTICIPANT_TEMPLATE: "{{.PARTICIPANT_TEMPLATE}}"
+      PARTICIPANT_FOLDER: "{{.PARTICIPANT_FOLDER}}"
+    cmds:
+      - |
+        cd $PARTICIPANT_TEMPLATE/.. && git pull
+      - | 
+        rsync -av \
+        --exclude='store' \
+        --exclude='wallet/waltid/data' \
+        "$PARTICIPANT_TEMPLATE/" "$PARTICIPANT_FOLDER/"
+  
+  check-api-key:
+    desc: "Check participant environment {{.DATACELLAR_IDP_URL}}"
+    silent: true
+    cmds:
+      - |
+        status=$(curl -s -o /dev/null -w "%{http_code}" \
+          -X GET \
+          "{{.ISSUER_API_BASE_URL}}/api/v2/participants" \
+          -H 'accept: application/json' \
+          -H 'X-API-KEY: {{.ISSUER_API_KEY}}')
+
+        if [ "$status" -ne 200 ]; then
+          RED="\033[31m"
+          RESET="\033[0m"
+          case "$status" in
+            000) echo -e "${RED}API unreachable (network error or server down)${RESET}" ;;
+            401) echo -e "${RED}Unauthorized: check your ISSUER_API_KEY${RESET}" ;;
+            403) echo -e "${RED}Unauthorized: check your ISSUER_API_KEY${RESET}" ;;
+            404) echo -e "${RED}Not found: endpoint may be incorrect${RESET}" ;;
+            500) echo -e "${RED}Server error: something went wrong on the backend${RESET}" ;;
+            *)   echo -e "${RED}Unexpected error: got HTTP $status (expected 200)${RESET}" ;;
+          esac
+          exit 1
+        fi
+
+  check-domain:
+    desc: "Check if participant subdomain resolves in DNS {{.DID_WEB_DOMAIN}}"
+    silent: true
+    cmds:
+      - |
+        if getent hosts "{{.DID_WEB_DOMAIN}}" > /dev/null; then
+          echo "Subdomain {{.DID_WEB_DOMAIN}} resolves"
+        else
+          echo "Subdomain {{.DID_WEB_DOMAIN}} does not resolve"
+          exit 1
+        fi 

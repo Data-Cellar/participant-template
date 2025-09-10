@@ -1,6 +1,6 @@
 services:
   did-server:
-    image: nginx
+    image: nginx:1.29.1
     container_name: ${PARTICIPANT_NAME}.did-server
     restart: unless-stopped
     volumes:
