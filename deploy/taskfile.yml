@@ -54,3 +54,30 @@ tasks:
       USER_WORKING_DIR: "{{.USER_WORKING_DIR}}"
     cmds:
       - "{{.ROOT_DIR}}/setup-participant.sh"
+
+  upgrade:
+    desc: "Upgrade the participant components"
+    silent: true
+    env:
+      PARTICIPANT_TEMPLATE: "{{.ROOT_DIR}}/../participant-template"
+      PARTICIPANTS_FOLDER: "{{.ROOT_DIR}}/participants"
+    cmds:
+      - |
+        # Step 1: Update template repo
+        cd "$PARTICIPANT_TEMPLATE/.." && git pull
+
+      - |
+        # Step 2 & 3: Sync template and run upgrade for each participant
+        for participant in "$PARTICIPANTS_FOLDER"/*; do
+          if [ -d "$participant" ]; then
+            echo "==> Updating $participant"
+
+            rsync -av \
+              --exclude='store' \
+              --exclude='wallet/waltid/data' \
+              "$PARTICIPANT_TEMPLATE/" "$participant/"
+
+            echo "==> Running task upgrade in $participant"
+            (cd "$participant" && task upgrade || true)
+          fi
+        done
