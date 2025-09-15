@@ -1,0 +1,54 @@
+{
+    "title": "Data Cellar Participant Template",
+    "description": "A repository containing all the essential components needed to set up a Data Cellar participant, including a web server for hosting verifiable credentials, a participant wallet, the Data Cellar data space connector (based on the EDC connector codebase), and the Data Cellar CDE.",
+    "license": {
+        "id": "MIT"
+    },
+    "creators": [
+        {
+            "name": "Azzabi, Radhouene",
+            "affiliation": "CEA",
+            "email": "radhouene.azzabi@cea.fr"
+        },
+        {
+            "name": "Vassiliadis, Michalis",
+            "affiliation": "QUE Technologies",
+            "email": "m.vassiliadis@que-tech.com"
+        },
+        {
+            "name": "Garcia Mangas, Andres",
+            "affiliation": "CTIC",
+            "email": "andres.garcia@fundacionctic.org"
+        }
+    ],
+    "access_right": "open",
+    "upload_type": "software",
+    "version": "0.1.0",
+    "publication_date": "2024-11-18",
+    "keywords": [
+        "data space",
+        "eclipse dataspace components",
+        "verifiable credentials",
+        "data cellar",
+        "horizon europe",
+        "edc connector",
+        "federated data exchange"
+    ],
+    "related_identifiers": [
+        {
+            "identifier": "https://github.com/Data-Cellar/participant-template",
+            "relation": "isIdenticalTo",
+            "resource_type": "software"
+        }
+    ],
+    "language": "en",
+    "resource_type": {
+        "type": "software"
+    },
+    "communities": [
+        {
+            "identifier": "datacellar"
+        }
+    ],
+    "notes": "This template provides a complete setup for participating in the Data Cellar data space, including all necessary infrastructure components such as EDC connector, wallet services, credentials manager, and web UI components."
+}

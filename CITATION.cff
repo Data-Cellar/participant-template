@@ -1,0 +1,28 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "Data Cellar Participant Template"
+abstract: "A repository containing all the essential components needed to set up a Data Cellar participant, including a web server for hosting verifiable credentials, a participant wallet, the Data Cellar data space connector (based on the EDC connector codebase), and the Data Cellar CDE."
+authors:
+  - family-names: "Azzabi"
+    given-names: "Radhouene"
+    affiliation: "CEA"
+    email: "radhouene.azzabi@cea.fr"
+  - family-names: "Vassiliadis"
+    given-names: "Michalis"
+    affiliation: "QUE Technologies"
+    email: "m.vassiliadis@que-tech.com"
+  - family-names: "Garcia Mangas"
+    given-names: "Andres"
+    affiliation: "CTIC"
+    email: "andres.garcia@fundacionctic.org"
+repository-code: "https://github.com/Data-Cellar/participant-template"
+license: MIT
+date-released: 2024-11-18
+version: "0.1.0"
+keywords:
+  - "data space"
+  - "eclipse dataspace components"
+  - "verifiable credentials"
+  - "data cellar"
+  - "horizon europe"
