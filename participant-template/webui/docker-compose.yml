@@ -1,6 +1,6 @@
 services:
   webui:
-    image: docker.io/razzabi/participant-webui:v0.2.3
+    image: docker.io/razzabi/participant-webui:v0.2.4
     container_name: ${PARTICIPANT_NAME}.credentials-webui
     restart: always
     environment:
