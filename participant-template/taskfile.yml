@@ -144,6 +144,14 @@ tasks:
       - task did-server:upgrade
       - task connector:upgrade
       - task cde:upgrade
+      - task did-server:start
+      - task wallet:start
+      - task credentials-manager:start-api
+      - task credentials-manager:provision-wallet
+      - task connector:start
+      - task webui:start
+      - cmd: sh -c '{{if eq .USE_CDE "true"}} echo "task cde:start" && task cde:start{{end}}'
+      - cmd: sh -c '{{if eq .USE_CDE "true"}} echo "monitor CDE" && task monitor-cde-openapi &{{end}}'
       
   fetch-template:
     desc: "Upgrade the participant conponents"

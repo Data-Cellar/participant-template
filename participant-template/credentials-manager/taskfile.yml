@@ -18,7 +18,7 @@ tasks:
     preconditions:
       - test -f {{.TASKFILE_DIR}}/docker-compose.yml
     cmds:
-      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml up credentials-api --wait
+      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml up --force-recreate --pull always credentials-api --wait
 
   stop-api:
     desc: "Stop Credentials Manager"
@@ -103,7 +103,7 @@ tasks:
     desc: "Upgrade the credentials-manager"
     silent: true
     cmds:
-      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml pull --ignore-pull-failures --quiet --policy always
+      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml pull --ignore-pull-failures
   
   publish-service-offerings:
     silent: true

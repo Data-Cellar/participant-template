@@ -18,7 +18,7 @@ tasks:
     preconditions:
       - test -f {{.TASKFILE_DIR}}/docker-compose.yml
     cmds:
-      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml up webui --wait
+      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml up --force-recreate --pull always webui --wait
 
   stop:
     desc: "Stop Web-UI"
@@ -34,4 +34,4 @@ tasks:
     preconditions:
       - test -f {{.TASKFILE_DIR}}/docker-compose.yml
     cmds:
-      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml pull --ignore-pull-failures --quiet --policy always
+      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml pull --ignore-pull-failures

@@ -52,7 +52,7 @@ tasks:
   start:
     desc: "Start the cde-server"
     cmds:
-      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml up -d --wait
+      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml up -d --force-recreate --pull always --wait
   
   stop:
     desc: "Stop the cde-server"
@@ -64,7 +64,7 @@ tasks:
     desc: "Upgrade the cde"
     silent: true
     cmds:
-      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml pull --ignore-pull-failures --quiet --policy always
+      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml pull --ignore-pull-failures
 
   reset:
     desc: "Reset the cde-configuration"
