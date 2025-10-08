@@ -19,7 +19,7 @@
 This repository contains all the essential components needed to set up a Data Cellar participant. It includes a web server for hosting verifiable credentials, a participant wallet, the Data Cellar data space connector (based on the EDC connector codebase), and the Data Cellar CDE.
 
 > [!CAUTION]
-> This repository is in an early stage of development. The codebase is not stable and the interfaces are subject to change. Some features are half-implemented.
+> This repository is in an early stage of development. The codebase is not stable and the interfaces are subject to change.
 
 ## Project Structure
 
@@ -76,9 +76,8 @@ The **web page of the onboarding portal** is available at:
 
 https://idp.datacellar.cosypoc.ovh
 
-
-[!IMPORTANT]
-The onboarding portal is still a work in progress. If you experience any issues or if the portal is temporarily unavailable, please contact the Data Cellar team for assistance.
+> [!IMPORTANT]
+> The onboarding portal is still a work in progress. If you experience any issues or if the portal is temporarily unavailable, please contact the Data Cellar team for assistance.
 
 ![Alt text](docs/images/idp-portal.png)
 
