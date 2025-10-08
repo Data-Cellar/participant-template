@@ -12,7 +12,6 @@
       - [Run an Example to Test the Connector](#run-an-example-to-test-the-connector)
   - [Other Tasks and Notes](#other-tasks-and-notes)
     - [Access to the Credentials Manager API](#access-to-the-credentials-manager-api)
-    - [Register a Legal Participant in the Global Catalogue](#register-a-legal-participant-in-the-global-catalogue)
   - [Next Steps](#next-steps)
     - [Testing Against the Public Test Connector](#testing-against-the-public-test-connector)
   - [License](#license)
@@ -41,6 +40,11 @@ To deploy a participant, you need to have the following prerequisites:
 > Your DNS must be configured for both the domain name and the subdomain that includes the participant name. For example, if your DNS domain is `datacellar.cosypoc.ovh` and your participant name is `consumer`, your DNS must be configured for both `datacellar.cosypoc.ovh` and `consumer.datacellar.cosypoc.ovh`.
 
 There are scripts for your convenience in the `install` directory to help you install these prerequisites. In any case, it is recommended that you follow the official documentation for these tools.
+
+```
+$ cd install
+$ sudo install_requirements.sh
+```
 
 ### Obtain an API Key
 
@@ -72,7 +76,20 @@ The **web page of the onboarding portal** is available at:
 
 https://idp.datacellar.cosypoc.ovh
 
-However, please note that the onboarding portal is a work in progress. If you encounter any issues, or if the portal is unavailable, please contact the Data Cellar team.
+
+[!IMPORTANT]
+The onboarding portal is still a work in progress. If you experience any issues or if the portal is temporarily unavailable, please contact the Data Cellar team for assistance.
+
+![Alt text](docs/images/idp-portal.png)
+
+Click “Join Now” and fill out the registration form with your personal information to submit your onboarding request.
+Your request will be reviewed by the Data Cellar Administrator. Once approved, you’ll receive a verification email prompting you to set your password.
+
+After your account has been approved, you can log in to the IdP Participant Portal (if you are deploying a Participant Template).
+
+![Alt text](docs/images/idp-portal-api-token.png)
+
+Once you obtain your API KEY, make sure to store it securely — it is required for participant deployment
 
 ## User Guide
 
@@ -217,34 +234,6 @@ https://<fully-qualified-participant-domain>/api/v1/docs
 
 For example, if your participant is named `consumer` and your DNS domain is `datacellar.cosypoc.ovh`, the API documentation will be available at `https://consumer.datacellar.cosypoc.ovh/api/v1/docs`.
 
-### Register a Legal Participant in the Global Catalogue
-
-To register a legal participant in the global catalogue, run the following task:
-
-```
-task credentials-manager:register-legalparticipant-catalogue
-```
-
-You will be prompted to enter the ID or URL of the Legal Participant's Verifiable Presentation (VP), which was generated during the participant deployment process.
-
-The catalogue registration request is sent to the Data Cellar Identity Provider, which handles the registration in the catalogue. This process was designed this way for governance and authorization reasons. The Data Cellar administrator must approve the registration of a new participant in the catalogue.
-
-> [!NOTE]
-> This feature has been implemented but is not fully connected to the global catalogue, as it is not currently deployed.
-
-For example:
-
-```console
-$ task credentials-manager:register-legalparticipant-catalogue
-task: [credentials-manager:start-api] docker compose -p consumer up credentials-api --wait
-[+] Running 1/1
- ✔ Container consumer.credentials-api  Healthy                                                                                                                                   0.0s 
-VP Legal Participant (url or id): https://consumer.datacellar.cosypoc.ovh/vp/bc6ca012-e5bd-46a2-99a0-76edfef0c105.json
-2024-10-23 15:01:18.957 | INFO     | __main__:<module>:83 - [Participant DID] -> did:web:consumer.datacellar.cosypoc.ovh:wallet-api:registry:7051ea41-28e2-4fdb-bbf7-ad2c65aa29d9
-2024-10-23 15:01:18.957 | INFO     | __main__:<module>:85 - [Global Catalogue] -> register legal participant
-2024-10-23 15:01:18.957 | INFO     | __main__:<module>:86 - [LEGAL_PARTICIPANT_ID] -> https://consumer.datacellar.cosypoc.ovh/vp/bc6ca012-e5bd-46a2-99a0-76edfef0c105.json
-2024-10-23 15:01:22.268 | INFO     | __main__:<module>:91 - {'status': 'success', 'message': 'All credentials verified successfully', 'details': 'registration legalParticipant into the catalogue is under-construction'}
-```
 
 ## Next Steps
 

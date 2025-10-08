@@ -13,20 +13,33 @@ version: "3"
 tasks:
   start:
     desc: "Start Wallet"
+    silent: true
     deps:
       - config
-    dir: '{{.WALLET_FOLDER}}'
+    preconditions:
+      - test -f {{.TASKFILE_DIR}}/docker-compose.yml
     cmds:
-      - docker compose -p {{.PARTICIPANT_NAME}} up wallet -d --wait
+      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml up wallet -d --wait
   
   stop:
     desc: "Stop Wallet"
-    dir: '{{.WALLET_FOLDER}}'
+    silent: true
+    preconditions:
+      - test -f {{.TASKFILE_DIR}}/docker-compose.yml
     cmds:
-        - docker compose -p {{.PARTICIPANT_NAME}} stop wallet
+        - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml down wallet
   
   config:
     desc: "Config Wallet"
+    silent: true
     dir: '{{.WALLET_FOLDER}}/waltid'
     cmds:
       - sudo chmod 755 data && sudo chown -R 1001:1001 data
+
+  upgrade:
+    desc: "Upgrade the wallet"
+    silent: true
+    preconditions:
+      - test -f {{.TASKFILE_DIR}}/docker-compose.yml
+    cmds:
+      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml pull --ignore-pull-failures --quiet --policy always

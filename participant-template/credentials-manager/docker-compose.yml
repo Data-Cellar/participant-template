@@ -1,6 +1,6 @@
 services:
   credentials-api:
-    image: docker.io/razzabi/datacellar-cli:v0.4.44
+    image: docker.io/razzabi/datacellar-cli:v0.4.48
     container_name: ${PARTICIPANT_NAME}.credentials-api
     restart: unless-stopped
     command: datacellar serve-api --port 8080

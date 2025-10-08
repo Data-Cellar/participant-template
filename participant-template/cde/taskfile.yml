@@ -13,11 +13,11 @@ version: "3"
 tasks:
   prepare:
     desc: "Load the cde-server Docker image to the engine"
-    dir: '{{.CDE_FOLDER}}'
+    dir: '{{.TASKFILE_DIR}}'
     cmds: 
       - |
         # Start Fuseki service
-        docker compose -p {{.PARTICIPANT_NAME}} -f {{.CDE_FOLDER}}/docker-compose.yml up fuseki -d
+        docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml up fuseki -d
        
         # Create auth header once
         AUTH_HEADER="Authorization: Basic $(echo -n "{{.CDE_FUSEKI_USER}}:{{.CDE_FUSEKI_PASSWORD}}" | base64)"
@@ -47,42 +47,127 @@ tasks:
           fi
         fi
 
-        docker compose -p {{.PARTICIPANT_NAME}} -f {{.CDE_FOLDER}}/docker-compose.yml down fuseki
+        docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml down fuseki
 
   start:
     desc: "Start the cde-server"
-    dir: '{{.CDE_FOLDER}}'
     cmds:
-      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.CDE_FOLDER}}/docker-compose.yml up -d --wait
+      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml up -d --force-recreate --pull always --wait
   
   stop:
     desc: "Stop the cde-server"
-    dir: '{{.CDE_FOLDER}}'
+    silent: true
     cmds:
-      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.CDE_FOLDER}}/docker-compose.yml  down
+      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml  down
+
+  upgrade:
+    desc: "Upgrade the cde"
+    silent: true
+    cmds:
+      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml pull --ignore-pull-failures
 
   reset:
     desc: "Reset the cde-configuration"
-    dir: '{{.CDE_FOLDER}}'
     cmds:
       - >
-      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.CDE_FOLDER}}/docker-compose.yml  down
+      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml  down
       - docker volume rm {{.PARTICIPANT_NAME}}_fuseki-data || true
       - docker volume rm {{.PARTICIPANT_NAME}}_influxdb-data || true
 
   upload-test-dataset:
-    desc: "Upload test dataset_A1.json to the CDE via internal API on port 5000"
-    dir: '{{.CDE_FOLDER}}'
+    desc: "Upload test dataset_A1 to the CDE via internal API on port 5000"
+    silent: true
     cmds:
       - |
         # Check if CDE is running
         if curl -sf http://localhost:5000/api/dataset > /dev/null; then
           echo "CDE is running. Proceeding to upload dataset..."
           curl -X POST \
-            -F "file=@dataset_A1.json" \
+            -F "file=@{{.TASKFILE_DIR}}/dataset_A1.json" \
             http://localhost:5000/api/dataset
         else
           echo "CDE is not running on port 5000. Aborting upload."
           exit 1
         fi
+
+  upload-batch-dataset:
+    desc: "Upload all dataset JSON files in a folder (each file can be a single object or an array)"
+    silent: true
+    vars:
+      FOLDER: '{{default "./datasets" .FOLDER}}'   # default folder if not provided
+    cmds:
+      - |
+        if curl -sf http://localhost:5000/api/dataset > /dev/null; then
+          echo "CDE is running. Scanning folder: {{.FOLDER}}"
+
+          for file in {{.FOLDER}}; do
+            [ -e "$file" ] || { echo "No JSON files found in {{.FOLDER}}"; exit 1; }
+            echo "Processing file: $file"
+
+            if jq -e 'if type=="array" then true else false end' "$file" > /dev/null; then
+              echo "$file contains an array. Uploading each object..."
+              total=$(jq length "$file")
+              echo "Found $total objects."
+
+              for i in $(seq 0 $((total - 1))); do
+                obj=$(jq -c ".[$i]" "$file")
+                echo "Uploading object $((i+1))/$total from $file"
+                curl -s -X POST \
+                  -H "Content-Type: application/json" \
+                  -d "$obj" \
+                  http://localhost:5000/api/dataset || {
+                    echo "Failed to upload object $((i+1)) from $file"
+                    exit 1
+                }
+              done
+              echo "All objects from $file uploaded successfully."
+            else
+              echo "$file contains a single object. Uploading..."
+              curl -s -X POST \
+                -F "file=@$file" \
+                http://localhost:5000/api/dataset || {
+                  echo "Failed to upload dataset from $file"
+                  exit 1
+              }
+              echo "Single dataset from $file uploaded successfully."
+            fi
+          done
+        else
+          echo "CDE is not running on port 5000. Aborting upload."
+          exit 1
+        fi
+
+  clear-datasets:
+    desc: "Delete all datasets from the CDE via internal API on port 5000"
+    silent: true
+    cmds:
+      - |
+        if curl -sf http://localhost:5000/api/dataset > /dev/null; then
+          echo "CDE is running. Fetching datasets..."
+
+          ids=$(curl -s http://localhost:5000/api/dataset | jq -r '.[] | .id = (.uri["@id"] | split("/") | .[-1]) | .id')
+
+          if [ -z "$ids" ]; then
+            echo "No datasets found."
+            exit 0
+          fi
+
+          for id in $ids; do
+            echo "Deleting dataset: $id"
+            response=$(curl -s -w "%{http_code}" -o /tmp/resp.json \
+              -X DELETE http://localhost:5000/api/dataset/$id)
+
+            if [ "$response" -ne 200 ]; then
+              echo "Failed to delete dataset $id"
+              cat /tmp/resp.json
+              exit 1
+            fi
+          done
+
+          echo "All datasets cleared successfully."
+        else
+          echo "CDE is not running on port 5000. Aborting."
+          exit 1
+        fi
+
 

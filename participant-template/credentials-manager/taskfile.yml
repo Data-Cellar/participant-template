@@ -14,66 +14,106 @@ version: "3"
 tasks:
   start-api:
     desc: "Start Credentials Manager API"
-    dir: "{{.CREDENTIALS_MANAGER_FOLDER}}"
+    silent: true
     preconditions:
-      - test -f docker-compose.yml
+      - test -f {{.TASKFILE_DIR}}/docker-compose.yml
     cmds:
-      - docker compose -p {{.PARTICIPANT_NAME}} up credentials-api --wait
+      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml up --force-recreate --pull always credentials-api --wait
 
   stop-api:
     desc: "Stop Credentials Manager"
-    dir: "{{.CREDENTIALS_MANAGER_FOLDER}}"
+    silent: true
     preconditions:
-      - test docker-compose.yml
+      - test -f {{.TASKFILE_DIR}}/docker-compose.yml
     cmds:
-      - docker compose -p {{.PARTICIPANT_NAME}} down credentials-api
+      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml down credentials-api
 
   provision-wallet:
     silent: true
     desc: "Provision Wallet"
     deps:
       - start-api
-    dir: "{{.CREDENTIALS_MANAGER_FOLDER}}"
     preconditions:
-      - test -f docker-compose.yml
+      - test -f {{.TASKFILE_DIR}}/docker-compose.yml
       - test -f {{.CERT_FOLDER}}/{{.DID_WEB_DOMAIN}}.key
       - test -f {{.CERT_FOLDER}}/{{.DID_WEB_DOMAIN}}.crt
     cmds:
       - echo "Provisioning participant {{.PARTICIPANT_NAME}} wallet"
       - >
-        docker exec -it {{.PARTICIPANT_NAME}}.credentials-api
-        datacellar provision-wallet
+        docker exec -it {{.PARTICIPANT_NAME}}.credentials-api datacellar provision-wallet
 
   create-legalparticipant:
     silent: true
     desc: "Create a legal participant with the provided legal name, VAT ID, and country subdivision code"
     deps:
       - start-api
-    dir: "{{.CREDENTIALS_MANAGER_FOLDER}}"
     cmds:
+      - |
+        bash -c '
+        # --- Step 1: check for existing env ---
+        if [ -f .env.local ]; then
+          echo "Found existing .env.local:"
+          cat .env.local
+          read -t 10 -p "Do you want to reuse these values? [Y/n] (default Y, 10s timeout): " reuse
+          reuse=${reuse:-Y}
+        else
+          reuse="n"
+        fi
+
+        # --- Step 2: prompt for new values if not reusing ---
+        if [ "$reuse" = "n" ] || [ "$reuse" = "N" ]; then
+          read -p "Enter legal name (CEA): " legalname
+          legalname=${legalname:-CEA}
+          read -p "Enter VAT ID (FR43775685019): " vatid
+          vatid=${vatid:-FR43775685019}
+          read -p "Enter country subdivision code (FR-OCC): " subdivision
+          subdivision=${subdivision:-FR-OCC}
+
+          # save for future runs
+          echo "LEGAL_NAME=$legalname" > .env.local
+          echo "VAT_ID=$vatid" >> .env.local
+          echo "SUBDIVISION=$subdivision" >> .env.local
+
+          # reset onboarding progress
+          rm -f {{.CREDENTIALS_FOLDER}}/participant_onboarding_progress.json
+        fi
+
+        # --- Step 3: load values ---
+        source .env.local
+        echo "Using: legalName=$LEGAL_NAME, vatID=$VAT_ID, CountrySubdivisionCode=$SUBDIVISION"
+
+        # --- Step 4: ask if participant should be recreated if it exists ---
+        read -t 10 -p "Participant exists. Do you want to recreate it? [y/N] (default N, 10s timeout): " recreate
+        recreate=${recreate:-N}
+        if [ "$recreate" = "y" ] || [ "$recreate" = "Y" ]; then
+          echo "Recreating participant..."
+        else
+          echo "Proceeding without recreating participant..."
+        fi
+
+        # --- Step 5: execute docker command ---
+        docker exec -it {{.PARTICIPANT_NAME}}.credentials-api \
+          datacellar create-legal-participant \
+            --participant-legal-name=$LEGAL_NAME \
+            --participant-vat-id=$VAT_ID \
+            --participant-country-subdivision-code=$SUBDIVISION \
+            $( [ "$recreate" = "y" ] && echo --recreate )
+        '
+  upgrade:
+    desc: "Upgrade the credentials-manager"
+    silent: true
+    cmds:
+      - docker compose -p {{.PARTICIPANT_NAME}} -f {{.TASKFILE_DIR}}/docker-compose.yml pull --ignore-pull-failures
+  
+  publish-service-offerings:
+    silent: true
+    desc: "Publish Service Offerings"
+    deps:
+      - start-api
+    preconditions:
+      - test -f {{.TASKFILE_DIR}}/docker-compose.yml
+      - test -f {{.CREDENTIALS_FOLDER}}/participant_onboarding_progress.json
+    cmds:
+      - echo "Provisioning participant {{.PARTICIPANT_NAME}} wallet"
       - >
-        read -p "Enter legal name (CEA): " legalname &&
-        legalname=${legalname:-CEA} &&
-        read -p "Enter VAT ID (FR43775685019): " vatid &&
-        vatid=${vatid:-FR43775685019} &&
-        read -p "Enter country subdivision code (FR-OCC): " subdivision &&
-        subdivision=${subdivision:-FR-OCC} &&
-        echo "Creating legal participant: legalName=$legalname, vatID=$vatid, CountrySubdivisionCode=$subdivision" &&
-        docker exec -it {{.PARTICIPANT_NAME}}.credentials-api
-        datacellar create-legal-participant --participant-legal-name=$legalname --participant-vat-id=$vatid --participant-country-subdivision-code=$subdivision
-
-  # register-legalparticipant-catalogue:
-  #   desc: "Register a legal participant to the global catalogue"
-  #   deps:
-  #     - start-api
-  #   silent: true
-  #   dir: "{{.CREDENTIALS_MANAGER_FOLDER}}"
-  #   cmds:
-  #     - |
-  #       read -p "VP Legal Participant (url or id): " legalparticipant_id
-  #       legalparticipant_id=${legalparticipant_id:-}
-
-  #       docker exec -it {{.PARTICIPANT_NAME}}.credentials-api \
-  #         bash -c "\
-  #         LEGAL_PARTICIPANT_ID=$legalparticipant_id \
-  #         python3 register_participant_to_catalogue.py"
+        docker exec -it {{.PARTICIPANT_NAME}}.credentials-api datacellar publish-service-offerings
