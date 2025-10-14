@@ -12,6 +12,7 @@ services:
       CDE_INFLUXDB_ORG: ${CDE_INFLUXDB_ORG}
       CDE_INFLUXDB_BUCKET: ${CDE_INFLUXDB_BUCKET}
       CDE_FUSEKI_URL: http://fuseki:3030
+      PARTICIPANT_BASE_URL: ${PARTICIPANT_NAME}.${DOMAIN_NAME}
     depends_on:
       influxdb:
         condition: service_healthy
