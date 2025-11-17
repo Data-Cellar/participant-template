@@ -11,6 +11,20 @@ version: "3"
 
 dotenv: [".env"]
 
+vars:
+  # Resolves the absolute path to the git repository root
+  # - Starts from the current working directory
+  # - Traverses up to 4 directory levels searching for .git directory
+  # - Returns the git root if found, otherwise returns the working directory
+  GIT_ROOT:
+    sh: |
+      d="{{.USER_WORKING_DIR}}"; i=0
+      while [ "$d" != "/" ] && [ $i -lt 4 ]; do
+        [ -d "$d/.git" ] && echo "$d" && exit 0
+        d=$(dirname "$d"); i=$((i + 1))
+      done
+      echo "{{.USER_WORKING_DIR}}"
+
 includes:
   wallet: "wallet/taskfile.yml"
   did-server: "did-server/taskfile.yml"
@@ -22,6 +36,7 @@ includes:
 
 tasks:
   start-all:
+    desc: "Start all participant services (DID server, wallet, credentials manager, connector, and WebUI)"
     deps:
       - check-domain
       - check-api-key
@@ -39,6 +54,7 @@ tasks:
       - cmd: sh -c '{{if eq .USE_CDE "true"}} echo "monitor CDE" && task monitor-cde-openapi &{{end}}'
 
   stop-all:
+    desc: "Stop all participant services (DID server, wallet, credentials manager, connector, and WebUI)"
     cmds:
       - task credentials-manager:stop-api
       - task connector:stop
@@ -49,6 +65,7 @@ tasks:
       - cmd: sh -c '{{if eq .USE_CDE "true"}} echo "monitor CDE" && task stop-monitor &{{end}}'
 
   config-all:
+    desc: "Configure all participant services (DID server, proxy, wallet, and connector)"
     cmds:
       - task did-server:config
       - task proxy:config
@@ -56,6 +73,7 @@ tasks:
       - task connector:config
 
   generate-certs:
+    desc: "Generate or import SSL certificates and prepare certificate configuration for the participant domain"
     silent: true
     dir: "{{.CERT_FOLDER}}"
     postconditions:
@@ -74,6 +92,7 @@ tasks:
       - bash {{.SCRIPTS_FOLDER}}/prepare-certs.sh
 
   import-certs:
+    desc: "Import SSL certificates from the reverse proxy and configure them for the participant"
     silent: true
     dir: "{{.CERT_FOLDER}}"
     vars:
@@ -91,7 +110,7 @@ tasks:
       - curl -s https://letsencrypt.org/certs/isrgrootx1.pem >> {{.PARTICIPANT_X5U}}
 
   create-legalparticipant:
-    desc: "Create Legal Participant"
+    desc: "Interactively create a legal participant in the credentials manager"
     silent: true
     cmds:
       - |
@@ -104,7 +123,7 @@ tasks:
         fi
 
   monitor-cde-openapi:
-    desc: Monitor CDE openapi spec and restart connector if changed
+    desc: "Monitor CDE OpenAPI specification for changes and automatically restart the connector when detected"
     silent: true
     cmds:
       - |
@@ -120,9 +139,9 @@ tasks:
           prev_hash=$current_hash
           sleep 10
         done
-  
+
   stop-monitor:
-    desc: Stop OpenAPI monitor task
+    desc: "Stop the CDE OpenAPI monitoring task and clean up its process ID"
     silent: true
     cmds:
       - |
@@ -134,7 +153,7 @@ tasks:
         fi
 
   upgrade:
-    desc: "Upgrade the participant conponents"
+    desc: "Stop all services, fetch template updates, upgrade all components, and restart all services"
     cmds:
       - task: stop-all
       - task: fetch-template
@@ -152,24 +171,24 @@ tasks:
       - task webui:start
       - cmd: sh -c '{{if eq .USE_CDE "true"}} echo "task cde:start" && task cde:start{{end}}'
       - cmd: sh -c '{{if eq .USE_CDE "true"}} echo "monitor CDE" && task monitor-cde-openapi &{{end}}'
-      
+
   fetch-template:
-    desc: "Upgrade the participant conponents"
+    desc: "Fetch and sync template updates from the repository to the participant folder"
     silent: true
-    env:
-      PARTICIPANT_TEMPLATE: "{{.PARTICIPANT_TEMPLATE}}"
-      PARTICIPANT_FOLDER: "{{.PARTICIPANT_FOLDER}}"
+    # Run git operations from the repository root
+    dir: "{{.GIT_ROOT}}"
     cmds:
-      - |
-        cd $PARTICIPANT_TEMPLATE/.. && git pull
-      - | 
-        rsync -av \
-        --exclude='store' \
-        --exclude='wallet/waltid/data' \
-        "$PARTICIPANT_TEMPLATE/" "$PARTICIPANT_FOLDER/"
-  
+      - git pull
+      # Sync template files to current working directory ({{.USER_WORKING_DIR}} is a built-in Taskfile variable)
+      # Excludes: data directories and store to preserve local data
+      - >
+        rsync -av
+        --exclude='store'
+        --exclude='wallet/waltid/data'
+        "{{.GIT_ROOT}}/participant-template/" "{{.USER_WORKING_DIR}}/"
+
   check-api-key:
-    desc: "Check participant environment {{.DATACELLAR_IDP_URL}}"
+    desc: "Verify that the issuer API is accessible and the API key is valid"
     silent: true
     cmds:
       - |
@@ -194,7 +213,7 @@ tasks:
         fi
 
   check-domain:
-    desc: "Check if participant subdomain resolves in DNS {{.DID_WEB_DOMAIN}}"
+    desc: "Verify that the participant subdomain resolves correctly in DNS"
     silent: true
     cmds:
       - |
@@ -203,4 +222,4 @@ tasks:
         else
           echo "Subdomain {{.DID_WEB_DOMAIN}} does not resolve"
           exit 1
-        fi 
+        fi
